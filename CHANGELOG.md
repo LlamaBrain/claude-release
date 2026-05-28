@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-28
+
+### Fixed
+
+- `.claude-plugin/marketplace.json` plugin source now uses the canonical structured `{ "source": "url", "url": "..." }` form. The v0.1.0 shorthand (`"source": "."`) was rejected by Claude Code with "This plugin uses a source type your Claude Code version does not support." (v0.1.1)
+
 ## [0.1.0] - 2026-05-28
 
 Initial extraction from the BeforeTheShade host project. The plugin previously lived under `<host>/.claude/plugins/claude-release/`; this 0.1.0 release establishes it as a standalone package distributed via its own marketplace.
@@ -30,5 +36,6 @@ Initial extraction from the BeforeTheShade host project. The plugin previously l
 - `lib/dotnet/ApiDiff/` does **not** ship a `NuGet.config`. Consumers with non-default NuGet sources may need to provide one locally. The dotnet build defaults to `nuget.org`.
 - `lib/api-diff.js` path filtering (`isIncludedCsPath`) excludes Unity-flavored directories (`Packages/`, `Library/`, `Temp/`) by default. These are sensible no-ops for non-Unity C# repos; consumer-side configuration is a future feature.
 
-[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.1
 [0.1.0]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.0

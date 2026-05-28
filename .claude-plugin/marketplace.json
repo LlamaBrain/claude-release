@@ -6,7 +6,10 @@
   "plugins": [
     {
       "name": "claude-release",
-      "source": ".",
+      "source": {
+        "source": "url",
+        "url": "https://github.com/LlamaBrain/claude-release.git"
+      },
       "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output."
     }
   ]
