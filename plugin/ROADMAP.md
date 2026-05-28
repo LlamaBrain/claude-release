@@ -16,6 +16,9 @@ A release that doesn't compile is the worst kind of release commit. Implemented 
 ### Standalone `/claude-release:dry-run`
 Preview command for iterating on changelog wording without staging anything. Composes `build-manifest.js` → changelog prompt → `verify-output.js --coverage` and prints the result inline. `--coverage` is ON in dry-run by default for maximum signal during iteration. Verify failures surface but do not auto-regenerate — the user decides whether to regenerate, hand-edit, or accept a heuristic warning. Defined in `commands/dry-run.md`; nothing on disk changes, no commits, no tags, no build-gate (dry-run has no commit to gate).
 
+### Smell test v0.2 heuristics — v0.2.0
+Three new checks added to `lib/smell.js`, all default-on, all heuristic. `scope-mismatch` fires when the Conventional Commit scope doesn't appear as a substring of any staged path. `unrelated-area-bundling` fires when a commit spans more than `--threshold-top-level-dirs` distinct top-level directories (default 5), with a built-in skip when `CHANGELOG.md` is in the staged set so release commits don't false-positive. `changelog-claims-unbacked` reverses `changelog-misses-breaking-change`: for each newly-added CHANGELOG bullet, requires at least one ≥ 5-char keyword to match somewhere in a commit subject/body or api-diff fqn. All three add smoke scenarios (now 15/15 green). `--ignore-smells` remains the user-side escape hatch for known false positives.
+
 ## Cross-cutting design notes
 
 - **Every blocking gate needs an explicit override flag** (`--skip-build`, `--skip-coverage`, etc.) and the override must be visible in the commit body or PR description. A gate you can silently bypass is a gate that decays.

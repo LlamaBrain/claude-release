@@ -146,6 +146,100 @@ function checkConventionalMalformed({ message }) {
   };
 }
 
+function checkScopeMismatch({ message, inputs }) {
+  const parsed = parseCommit(message);
+  if (!parsed.valid || !parsed.scope) return null;
+  const scope = parsed.scope.toLowerCase();
+  const matched = inputs.paths.some(p => p.toLowerCase().includes(scope));
+  if (matched) return null;
+  return {
+    check: 'scope-mismatch',
+    severity: 'warning',
+    message: `Commit scope "${scope}" does not appear in any staged path.`,
+    details: {
+      scope,
+      paths_sample: inputs.paths.slice(0, 5),
+      hint: 'Either the scope is wrong, or the change is broader than the scope implies. Pick a scope that matches the most-touched area, or drop the scope.',
+    },
+  };
+}
+
+function checkUnrelatedAreaBundling({ inputs, thresholdTopLevelDirs }) {
+  // Release-style commits naturally span many top-level dirs (CHANGELOG + VERSION + work).
+  // Skip when CHANGELOG.md is in the staged set — that's the release-commit signal per the
+  // releases-are-one-commit convention.
+  if (inputs.paths.some(p => /(?:^|\/)CHANGELOG\.md$/i.test(p))) return null;
+  const topLevels = new Set();
+  for (const p of inputs.paths) {
+    const top = p.split('/')[0];
+    if (top) topLevels.add(top);
+  }
+  if (topLevels.size <= thresholdTopLevelDirs) return null;
+  const arr = [...topLevels];
+  return {
+    check: 'unrelated-area-bundling',
+    severity: 'warning',
+    message: `Commit spans ${topLevels.size} top-level directories: ${arr.slice(0, 5).join(', ')}${topLevels.size > 5 ? '…' : ''}.`,
+    details: {
+      top_level_count: topLevels.size,
+      top_levels: arr,
+      threshold: thresholdTopLevelDirs,
+      hint: 'Consider splitting into focused commits per area. Genuinely cross-cutting changes are fine; unrelated changes piggybacking on each other are not.',
+    },
+  };
+}
+
+async function checkChangelogClaimsUnbacked({ inputs, runApiDiff, manifest }) {
+  if (!inputs.paths.some(p => /(?:^|\/)CHANGELOG\.md$/i.test(p))) return [];
+  const changelogPath = inputs.paths.find(p => /(?:^|\/)CHANGELOG\.md$/i.test(p));
+  const added = inputs.addedLinesForPath(changelogPath);
+  if (!added.trim()) return [];
+
+  // Build a keyword corpus from commit subjects/bodies + api-diff fqns.
+  const corpus = new Set();
+  for (const c of manifest?.commits ?? []) {
+    for (const w of `${c.subject ?? ''} ${c.body ?? ''}`.toLowerCase().split(/\W+/)) {
+      if (w.length >= 5) corpus.add(w);
+    }
+  }
+  let apiDiff = null;
+  if (inputs.prevRef) apiDiff = await runApiDiff(inputs.prevRef, inputs.toRef);
+  if (apiDiff) {
+    const entries = [
+      ...(apiDiff.added ?? []),
+      ...(apiDiff.removed ?? []),
+      ...(apiDiff.changed ?? []),
+    ];
+    for (const e of entries) {
+      for (const w of (e.fqn ?? '').toLowerCase().split(/\W+/)) {
+        if (w.length >= 4) corpus.add(w);
+      }
+    }
+  }
+
+  const warnings = [];
+  for (const raw of added.split('\n')) {
+    if (!/^\s*[-*]\s/.test(raw)) continue;
+    const text = raw
+      .replace(/\(([0-9a-f]{7,40}|v\d+\.\d+\.\d+[\w.\-+]*)\)\s*$/, '')
+      .replace(/^\s*[-*]\s+/, '')
+      .toLowerCase();
+    const keywords = text.split(/\W+/).filter(w => w.length >= 5);
+    if (keywords.length === 0) continue;
+    if (keywords.some(w => corpus.has(w))) continue;
+    warnings.push({
+      check: 'changelog-claims-unbacked',
+      severity: 'warning',
+      message: `Changelog bullet not backed by any commit subject/body or api-diff entry: "${raw.trim().slice(0, 100)}"`,
+      details: {
+        bullet: raw.trim(),
+        hint: 'Either rewrite the bullet using terms that appear in the underlying commit messages, or add a commit/api-diff entry that supports the claim.',
+      },
+    });
+  }
+  return warnings;
+}
+
 async function checkChangelogMissesBreakingChange({ inputs, runApiDiff, manifest }) {
   if (!inputs.paths.some(p => /(?:^|\/)CHANGELOG\.md$/i.test(p))) return [];
 
@@ -233,13 +327,14 @@ export async function runSmellChecks({
   inputs,
   thresholdFiles = 5,
   thresholdLoc = 100,
+  thresholdTopLevelDirs = 5,
   runApiDiff = tryApiDiff,
   manifest = null,
 } = {}) {
   if (!message) throw new Error('runSmellChecks: message is required');
   if (!inputs) throw new Error('runSmellChecks: inputs is required (use getStagedInputs() or getCommitInputs(ref))');
 
-  // Build manifest lazily for the changelog check; only needed when CHANGELOG.md is staged AND
+  // Build manifest lazily for the changelog checks; only needed when CHANGELOG.md is staged AND
   // we don't already have one passed in.
   let resolvedManifest = manifest;
   if (!resolvedManifest && inputs.paths.some(p => /(?:^|\/)CHANGELOG\.md$/i.test(p))) {
@@ -254,7 +349,10 @@ export async function runSmellChecks({
   add(checkBreakingMarkerNoDescription({ message }));
   add(checkThinSubjectOnSubstantiveDiff({ message, inputs, thresholdFiles, thresholdLoc }));
   add(checkConventionalMalformed({ message }));
+  add(checkScopeMismatch({ message, inputs }));
+  add(checkUnrelatedAreaBundling({ inputs, thresholdTopLevelDirs }));
   addAll(await checkChangelogMissesBreakingChange({ inputs, runApiDiff, manifest: resolvedManifest }));
+  addAll(await checkChangelogClaimsUnbacked({ inputs, runApiDiff, manifest: resolvedManifest }));
 
   return { warnings };
 }

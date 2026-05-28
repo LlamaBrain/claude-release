@@ -83,7 +83,8 @@ async function scenarioClean() {
   await withRepo(async (repo) => {
     writeFileSync(join(repo, 'a.txt'), 'one line\n');
     git(repo, 'add', 'a.txt');
-    const message = 'feat(foo): add the a file\n\nThis adds a single-line file as a smoke fixture for the test harness.\n';
+    // Scopeless message so the new scope-mismatch check doesn't fire on the baseline.
+    const message = 'feat: add the a file\n\nThis adds a single-line file as a smoke fixture for the test harness.\n';
     const inputs = getStagedInputs();
     const result = await runSmellChecks({ message, inputs, runApiDiff: fakeApiDiff() });
     assertEq('scenarioClean: no warnings', checkIds(result), []);
@@ -207,6 +208,106 @@ async function scenarioChangelogSurfacesBreakingClean() {
   });
 }
 
+async function scenarioScopeMismatch() {
+  await withRepo(async (repo) => {
+    writeFileSync(join(repo, 'a.txt'), 'x\n');
+    git(repo, 'add', 'a.txt');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'feat(ui): a thing\n\nThis is a body that explains the why and what of the change.\n',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+    });
+    assertContains('scenarioScopeMismatch', checkIds(result), ['scope-mismatch']);
+  });
+}
+
+async function scenarioScopeMatchClean() {
+  await withRepo(async (repo) => {
+    // Path contains "ui" — scope "ui" matches.
+    writeFileSync(join(repo, 'ui-panel.txt'), 'x\n');
+    git(repo, 'add', 'ui-panel.txt');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'feat(ui): a thing\n\nThis is a body that explains the why and what of the change.\n',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+    });
+    assertNotContains('scenarioScopeMatchClean', checkIds(result), ['scope-mismatch']);
+  });
+}
+
+async function scenarioUnrelatedAreaBundling() {
+  await withRepo(async (repo) => {
+    // 6 distinct top-level dirs > default threshold (5)
+    for (const dir of ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta']) {
+      mkdirSync(join(repo, dir), { recursive: true });
+      writeFileSync(join(repo, dir, 'f.txt'), 'x\n');
+      git(repo, 'add', `${dir}/f.txt`);
+    }
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'chore: kitchen sink\n\nBundling unrelated changes across many top-level directories to trigger the check.\n',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+    });
+    assertContains('scenarioUnrelatedAreaBundling', checkIds(result), ['unrelated-area-bundling']);
+  });
+}
+
+async function scenarioBundlingWithChangelogSkipped() {
+  await withRepo(async (repo) => {
+    // 6 top-level dirs AND CHANGELOG.md → release pattern, bundling check should NOT fire.
+    for (const dir of ['alpha', 'beta', 'gamma', 'delta', 'epsilon', 'zeta']) {
+      mkdirSync(join(repo, dir), { recursive: true });
+      writeFileSync(join(repo, dir, 'f.txt'), 'x\n');
+      git(repo, 'add', `${dir}/f.txt`);
+    }
+    writeFileSync(join(repo, 'CHANGELOG.md'), '# Changelog\n\n## [v0.0.2] - 2026-01-01\n\n### Added\n\n- A thing across many dirs (v0.0.2)\n');
+    git(repo, 'add', 'CHANGELOG.md');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'chore(release): v0.0.2\n\nRelease body explaining the cross-cutting work.\n',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+      manifest: { commits: [], api_diff: { added: [], removed: [], changed: [] } },
+    });
+    assertNotContains('scenarioBundlingWithChangelogSkipped', checkIds(result), ['unrelated-area-bundling']);
+  });
+}
+
+async function scenarioChangelogClaimsUnbacked() {
+  await withRepo(async (repo) => {
+    // Bullet text uses keyword "quantum" that appears in NO commit subject/body and NO api-diff.
+    writeFileSync(join(repo, 'CHANGELOG.md'), '# Changelog\n\n## [v0.0.2] - 2026-01-01\n\n### Added\n\n- Quantum hyperloop teleporter (v0.0.2)\n');
+    git(repo, 'add', 'CHANGELOG.md');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'chore(release): v0.0.2',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+      manifest: { commits: [{ hash: 'aaaaaaa', subject: 'add pause panel', body: '' }], api_diff: { added: [], removed: [], changed: [] } },
+    });
+    assertContains('scenarioChangelogClaimsUnbacked', checkIds(result), ['changelog-claims-unbacked']);
+  });
+}
+
+async function scenarioChangelogClaimsBackedClean() {
+  await withRepo(async (repo) => {
+    // Bullet keywords appear in a commit subject.
+    writeFileSync(join(repo, 'CHANGELOG.md'), '# Changelog\n\n## [v0.0.2] - 2026-01-01\n\n### Added\n\n- Pause panel for the UI (aaaaaaa)\n');
+    git(repo, 'add', 'CHANGELOG.md');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'chore(release): v0.0.2',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+      manifest: { commits: [{ hash: 'aaaaaaa', subject: 'add pause panel', body: '' }], api_diff: { added: [], removed: [], changed: [] } },
+    });
+    assertNotContains('scenarioChangelogClaimsBackedClean', checkIds(result), ['changelog-claims-unbacked']);
+  });
+}
+
 // ---- Main ----
 
 const scenarios = [
@@ -219,6 +320,12 @@ const scenarios = [
   ['api break + marker → clean', scenarioApiBreakWithMarkerClean],
   ['changelog-misses-breaking-change', scenarioChangelogMissesBreaking],
   ['changelog surfaces breaking → clean', scenarioChangelogSurfacesBreakingClean],
+  ['scope-mismatch', scenarioScopeMismatch],
+  ['scope match → clean', scenarioScopeMatchClean],
+  ['unrelated-area-bundling', scenarioUnrelatedAreaBundling],
+  ['bundling skipped on CHANGELOG release commit → clean', scenarioBundlingWithChangelogSkipped],
+  ['changelog-claims-unbacked', scenarioChangelogClaimsUnbacked],
+  ['changelog claims backed → clean', scenarioChangelogClaimsBackedClean],
 ];
 
 let failed = 0;

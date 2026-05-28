@@ -5,9 +5,10 @@
 //   smell-cli.js <ref>                        post-hoc audit of a single commit
 //
 // Optional flags:
-//   --json                    structured output
-//   --threshold-files <n>     default 5
-//   --threshold-loc <n>       default 100
+//   --json                          structured output
+//   --threshold-files <n>           default 5
+//   --threshold-loc <n>             default 100
+//   --threshold-top-level-dirs <n>  default 5 (unrelated-area-bundling)
 //
 // Exit code: number of warnings emitted (0 = clean). With --json, still reflects warning count.
 
@@ -28,6 +29,7 @@ function parseArgs(argv) {
     if (a === '--json') { args.flags.json = true; continue; }
     if (a === '--threshold-files') { args.flags.thresholdFiles = parseInt(argv[++i], 10); continue; }
     if (a === '--threshold-loc') { args.flags.thresholdLoc = parseInt(argv[++i], 10); continue; }
+    if (a === '--threshold-top-level-dirs') { args.flags.thresholdTopLevelDirs = parseInt(argv[++i], 10); continue; }
     if (a === '--help' || a === '-h') { args.flags.help = true; continue; }
     args.positional.push(a);
   }
@@ -37,7 +39,7 @@ function parseArgs(argv) {
 function usage() {
   process.stderr.write([
     'usage: smell-cli.js (--message "<text>" | --staged-msg-file <path> | <ref>)',
-    '                    [--json] [--threshold-files N] [--threshold-loc N]',
+    '                    [--json] [--threshold-files N] [--threshold-loc N] [--threshold-top-level-dirs N]',
     '',
     'Exit code = warning count (0 = clean).',
     '',
@@ -101,6 +103,7 @@ async function main() {
     inputs,
     thresholdFiles: args.flags.thresholdFiles ?? 5,
     thresholdLoc: args.flags.thresholdLoc ?? 100,
+    thresholdTopLevelDirs: args.flags.thresholdTopLevelDirs ?? 5,
   };
 
   const { warnings } = await runSmellChecks(opts);

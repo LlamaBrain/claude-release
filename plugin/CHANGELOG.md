@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-05-28
+
+### Added
+
+- `scope-mismatch` smell check — fires when a Conventional Commit scope (e.g. `feat(ui)`) doesn't appear as a substring of any staged path. Heuristic: scope is lowercased and matched against lowercased paths. Skipped silently when the commit has no scope. (v0.2.0)
+- `unrelated-area-bundling` smell check — fires when a commit spans more than `thresholdTopLevelDirs` distinct top-level directories. Default threshold is 5. Skipped when `CHANGELOG.md` is in the staged set, since release-style commits naturally span many areas (per the releases-are-one-commit convention). (v0.2.0)
+- `changelog-claims-unbacked` smell check — reverse of `changelog-misses-breaking-change`. For each newly-added `CHANGELOG.md` bullet, requires at least one ≥ 5-char keyword to match somewhere in any commit subject/body or any api-diff fqn. Bullets with no substantive keywords are skipped silently. (v0.2.0)
+- `--threshold-top-level-dirs N` CLI flag on `smell-cli.js` (default 5). (v0.2.0)
+
+### Changed
+
+- Smell smoke fixture for the clean baseline switched from `feat(foo):` (which now trips `scope-mismatch`) to scopeless `feat:`. (v0.2.0)
+- `runSmellChecks` signature gains `thresholdTopLevelDirs` (default 5). (v0.2.0)
+
 ## [0.1.5] - 2026-05-28
 
 ### Fixed
@@ -80,7 +94,8 @@ Initial extraction from the BeforeTheShade host project. The plugin previously l
 - `lib/dotnet/ApiDiff/` does **not** ship a `NuGet.config`. Consumers with non-default NuGet sources may need to provide one locally. The dotnet build defaults to `nuget.org`.
 - `lib/api-diff.js` path filtering (`isIncludedCsPath`) excludes Unity-flavored directories (`Packages/`, `Library/`, `Temp/`) by default. These are sensible no-ops for non-Unity C# repos; consumer-side configuration is a future feature.
 
-[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.5...HEAD
+[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.2.0
 [0.1.5]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.5
 [0.1.4]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.4
 [0.1.3]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.3
