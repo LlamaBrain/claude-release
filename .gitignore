@@ -1,9 +1,9 @@
-# Node deps — installed via `npm install` in each plugin's lib/
-plugins/*/lib/node_modules/
+# Node deps — installed via `npm install` in plugin/lib/
+plugin/lib/node_modules/
 
 # .NET build artifacts — produced on demand by api-diff.js
-plugins/*/lib/dotnet/**/bin/
-plugins/*/lib/dotnet/**/obj/
+plugin/lib/dotnet/**/bin/
+plugin/lib/dotnet/**/obj/
 
 # Editor / OS
 .DS_Store

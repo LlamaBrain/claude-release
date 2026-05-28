@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-05-28
+
+### Fixed
+
+- Plugin source path simplified from `./plugins/claude-release` (plural, two-level) to `./plugin` (singular, single-level), matching the pattern every working third-party plugin in this Claude Code's known marketplaces uses (`thedotmack/claude-mem`, `michael-tiller/claude-interrogate`). The two-level path was rejected by Claude Code's plugin source resolver with the generic "source type unsupported" error. Verified by inspecting the live cached marketplaces — every same-repo plugin uses `"./plugin"`. (v0.1.4)
+
+### Changed
+
+- Repo layout: `plugin/` is now the plugin directory (was `plugins/claude-release/`). `marketplace.json` source updated accordingly. `.gitignore` paths updated. (v0.1.4)
+
 ## [0.1.3] - 2026-05-28
 
 ### Fixed
@@ -58,7 +68,8 @@ Initial extraction from the BeforeTheShade host project. The plugin previously l
 - `lib/dotnet/ApiDiff/` does **not** ship a `NuGet.config`. Consumers with non-default NuGet sources may need to provide one locally. The dotnet build defaults to `nuget.org`.
 - `lib/api-diff.js` path filtering (`isIncludedCsPath`) excludes Unity-flavored directories (`Packages/`, `Library/`, `Temp/`) by default. These are sensible no-ops for non-Unity C# repos; consumer-side configuration is a future feature.
 
-[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.4
 [0.1.3]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.3
 [0.1.2]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.2
 [0.1.1]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.1
