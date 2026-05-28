@@ -1,5 +1,18 @@
 {
   "name": "claude-release",
-  "version": "0.1.0",
-  "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output. Five slash commands; only commit and changelog touch an LLM."
+  "version": "0.1.3",
+  "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output. Seven slash commands; only commit and changelog touch an LLM.",
+  "author": {
+    "name": "LlamaBrain"
+  },
+  "repository": "https://github.com/LlamaBrain/claude-release",
+  "homepage": "https://github.com/LlamaBrain/claude-release",
+  "license": "UNLICENSED",
+  "keywords": [
+    "claude-code",
+    "release",
+    "conventional-commits",
+    "changelog",
+    "semver"
+  ]
 }

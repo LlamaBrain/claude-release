@@ -1,4 +1,5 @@
 {
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "claude-release",
   "owner": {
     "name": "LlamaBrain"
@@ -6,8 +7,12 @@
   "plugins": [
     {
       "name": "claude-release",
+      "version": "0.1.3",
       "source": "./plugins/claude-release",
-      "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output."
+      "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output.",
+      "author": {
+        "name": "LlamaBrain"
+      }
     }
   ]
 }

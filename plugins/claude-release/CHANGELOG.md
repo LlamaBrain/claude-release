@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-05-28
+
+### Fixed
+
+- v0.1.2's `"source": "./plugins/claude-release"` form was still rejected with "This plugin uses a source type your Claude Code version does not support." The missing pieces vs. known-working plugins (claude-mem, anthropics/claude-plugins-public/agent-sdk-dev) were on the manifest side, not the source-type side: (1) plugin entry in `marketplace.json` needs a `version` field, (2) plugin.json needs an `author` field, (3) plugin.json's `version` was stale at `0.1.0` against the actual VERSION file. All three patched in v0.1.3. (v0.1.3)
+
+### Changed
+
+- plugin.json gains `author`, `repository`, `homepage`, `license`, and `keywords` fields to match the conventional Claude Code plugin manifest schema. (v0.1.3)
+- marketplace.json gains the `$schema` reference and a `version` field on the plugin entry, mirroring Anthropic's official `claude-plugins-public` shape. (v0.1.3)
+
 ## [0.1.2] - 2026-05-28
 
 ### Changed
@@ -47,7 +58,8 @@ Initial extraction from the BeforeTheShade host project. The plugin previously l
 - `lib/dotnet/ApiDiff/` does **not** ship a `NuGet.config`. Consumers with non-default NuGet sources may need to provide one locally. The dotnet build defaults to `nuget.org`.
 - `lib/api-diff.js` path filtering (`isIncludedCsPath`) excludes Unity-flavored directories (`Packages/`, `Library/`, `Temp/`) by default. These are sensible no-ops for non-Unity C# repos; consumer-side configuration is a future feature.
 
-[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.3
 [0.1.2]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.2
 [0.1.1]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.1
 [0.1.0]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.0
