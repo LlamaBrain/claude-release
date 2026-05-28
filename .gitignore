@@ -1,0 +1,15 @@
+# Node deps — installed via `npm install` in lib/
+lib/node_modules/
+
+# .NET build artifacts — produced on demand by api-diff.js
+lib/dotnet/**/bin/
+lib/dotnet/**/obj/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local consumer config (not yet implemented; reserved)
+.claude-release.local.json

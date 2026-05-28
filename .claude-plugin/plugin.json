@@ -1,0 +1,5 @@
+{
+  "name": "claude-release",
+  "version": "0.1.0",
+  "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output. Five slash commands; only commit and changelog touch an LLM."
+}

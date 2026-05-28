@@ -1,0 +1,13 @@
+{
+  "name": "claude-release",
+  "owner": {
+    "name": "LlamaBrain"
+  },
+  "plugins": [
+    {
+      "name": "claude-release",
+      "source": ".",
+      "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output."
+    }
+  ]
+}
