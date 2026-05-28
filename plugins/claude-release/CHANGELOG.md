@@ -7,11 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-28
+
+### Changed
+
+- Repo restructured to host the plugin under `plugins/claude-release/` (subdirectory layout), with `marketplace.json` at the repo root. Mirrors the layout Anthropic's official `claude-plugins-public` marketplace uses. `marketplace.json` source is now the relative string `"./plugins/claude-release"` — the structured `url` source type from v0.1.1 turned out to be unsupported by older Claude Code versions ("This plugin uses a source type your Claude Code version does not support."). The relative-path string is the oldest, most compatible source form. (v0.1.2)
+
+### Fixed
+
+- v0.1.1's attempted fix (structured `{ "source": "url", "url": "..." }` form) did not resolve the install failure on older Claude Code versions. v0.1.2 supersedes it. (v0.1.2)
+
 ## [0.1.1] - 2026-05-28
 
 ### Fixed
 
 - `.claude-plugin/marketplace.json` plugin source now uses the canonical structured `{ "source": "url", "url": "..." }` form. The v0.1.0 shorthand (`"source": "."`) was rejected by Claude Code with "This plugin uses a source type your Claude Code version does not support." (v0.1.1)
+- **Note:** this fix was later found insufficient on older Claude Code versions and was superseded by v0.1.2's relative-path source.
 
 ## [0.1.0] - 2026-05-28
 
@@ -36,6 +47,7 @@ Initial extraction from the BeforeTheShade host project. The plugin previously l
 - `lib/dotnet/ApiDiff/` does **not** ship a `NuGet.config`. Consumers with non-default NuGet sources may need to provide one locally. The dotnet build defaults to `nuget.org`.
 - `lib/api-diff.js` path filtering (`isIncludedCsPath`) excludes Unity-flavored directories (`Packages/`, `Library/`, `Temp/`) by default. These are sensible no-ops for non-Unity C# repos; consumer-side configuration is a future feature.
 
-[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/LlamaBrain/claude-release/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.2
 [0.1.1]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.1
 [0.1.0]: https://github.com/LlamaBrain/claude-release/releases/tag/v0.1.0
