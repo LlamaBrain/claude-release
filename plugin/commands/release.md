@@ -22,7 +22,54 @@ The chore-release-after-the-fact pattern produces a noisy two-commit cluster (on
    node "${CLAUDE_PLUGIN_ROOT}/lib/build-manifest.js" > /tmp/release-manifest.json
    ```
 
+   If the user passed `--prerelease <id>` (or `--pre <id>`) to `/release`, forward it:
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/lib/build-manifest.js" --prerelease <id> > /tmp/release-manifest.json
+   ```
+
+   If the user passed `--bump major|minor|patch` to `/release`, forward it. This is the documented escape hatch — see "Bump-kind authority" below for when it is legitimate.
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/lib/build-manifest.js" --bump <kind> > /tmp/release-manifest.json
+   ```
+
+   Flags can be combined: `--bump minor --prerelease rc` for the first RC of a feature release.
+
    The manifest reads committed history from `<last-tag>..HEAD`. Any staged work goes into the same release because it will be in the next commit.
+
+   **Trust `manifest.next_version` and `manifest.bump_kind` verbatim. Never override them.** The manifest implements strict SemVer 2.0.0 end-to-end and is the single source of truth for the next version.
+
+   How the manifest classifies (combined `compute-bump.js` + `build-manifest.js`):
+   - Any commit in range has a breaking marker (`!` or `BREAKING CHANGE:` footer)  → **major**
+   - Any `feat:` commit in range, no breaking                                       → **minor**
+   - Other Conventional Commit types in range (fix, perf, refactor, …)             → **patch**
+   - Zero commits in range, api-diff has removals or changes                       → **major** (likely breaking)
+   - Zero commits in range, api-diff has only additions                            → **minor** (backwards-compatible feature)
+   - Zero commits in range, staged work but empty api-diff                         → **patch** (non-API change)
+   - Nothing staged, nothing committed                                             → abort
+
+   You **may not** substitute your own semver opinion for the manifest's. "This feels like a feature" / "this is just a fix" / "we should hold back the minor bump" are not valid reasons. If the manifest produces a number you think is wrong, fix the manifest classifier (`compute-bump.js` / `build-manifest.js` / `parse-commits.js`) and rerun — do not patch the JSON.
+
+   The only legitimate override paths are upstream of the manifest:
+   - A breaking-change marker that `parse-commits.js` failed to detect → fix the parser.
+   - An api-diff entry classified wrong by `build-manifest.js`'s promotion → fix the promotion.
+   - A user explicit `--bump major|minor|patch` flag passed to `/release` (and forwarded to `build-manifest.js`). This is the documented escape hatch for cases the manifest legitimately cannot infer — typically non-Unity projects where api-diff returns null and the orchestrator has no commit signal yet (zero commits in range + staged work that is conceptually a `feat:` or breaking change). `--bump` short-circuits both the api-diff promotion and the staged-work-→-patch fallback. The user must pass it explicitly; the orchestrator does NOT invent it.
+
+   **Pre-release status uses semver pre-release identifiers** (e.g. `v1.0.0-rc.1`, `v2.0.0-alpha.3`). It is NOT expressed by sitting at `0.x.y`. Pre-1.0 as a "we haven't stabilized yet" signal is not used by this plugin.
+
+   The `--prerelease <id>` flag drives the pre-release flow:
+
+   | Previous tag       | Flag passed       | Resulting `next_version`                |
+   |--------------------|-------------------|-----------------------------------------|
+   | `v0.3.0` (stable)  | `--prerelease rc` | `v1.0.0-rc.0` (when manifest says major) |
+   | `v0.3.0` (stable)  | `--prerelease rc` | `v0.4.0-rc.0` (when manifest says minor) |
+   | `v1.0.0-rc.0`      | `--prerelease rc` | `v1.0.0-rc.1` (next RC in same series)   |
+   | `v1.0.0-rc.0`      | `--prerelease beta` | `v1.0.0-beta.0` (rename the pre-release series) |
+   | `v1.0.0-rc.5`      | *(no flag)*       | `v1.0.0` (graduate to stable; the commit-signal `kind` is reported as `graduate` and is informational only) |
+   | `v0.3.0` (stable)  | *(no flag)*       | bump per commit signal (the normal flow) |
+
+   "Graduate" is the official term in the manifest — `bump_kind: 'graduate'` signals the orchestrator that the version is dropping its pre-release identifier rather than incrementing a number. Treat it the same as any other manifest-decided bump: use it verbatim.
 
 2. **Generate the section**
 
@@ -92,7 +139,16 @@ The chore-release-after-the-fact pattern produces a noisy two-commit cluster (on
 - Force-push.
 - Skip git hooks.
 - Bypass the build-gate without a `--skip-build "<reason>"` invocation. A silently-skipped gate is a gate that decays.
+- Override `manifest.bump_kind` or `manifest.next_version` on your own semver judgment. The manifest is authoritative; see Step 1 for the only valid override conditions.
 
 ## Why changelog-before-commit
 
 The release artifacts (CHANGELOG entry, VERSION file, language-specific version surface) describe what the release IS. They belong in the commit that creates the release, not in a follow-up. Splitting them produces a transient "v0.1.0 work without v0.1.0 metadata" state on HEAD, which is wrong if anyone reads the tree between the two commits.
+
+## Tags vs GitHub Releases
+
+This plugin creates **annotated git tags** for every release. Git tags are the canonical, immutable record of every version — one tag per `manifest.next_version`, applied to the release commit.
+
+**GitHub Releases** (the `gh release create` surface) are reserved for **milestones and release candidates** — curated markers like `v1.0.0-rc.1`, `v1.0.0`, or a major roadmap milestone. Not every tag becomes a GitHub Release. This plugin does **not** auto-create GitHub Releases; that's the user's call per milestone.
+
+Practical implication: when you run `/release`, expect a tag and only a tag. If a milestone or RC is being cut, the user follows up with `gh release create <tag> --notes-from-tag` (or equivalent) separately.

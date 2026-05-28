@@ -189,6 +189,31 @@ function checkUnrelatedAreaBundling({ inputs, thresholdTopLevelDirs }) {
   };
 }
 
+function checkReleaseApiBreakNotMarked({ manifest }) {
+  if (!manifest) return null;
+  const apiDiff = manifest.api_diff ?? {};
+  const removed = apiDiff.removed ?? [];
+  const changed = apiDiff.changed ?? [];
+  if (removed.length === 0 && changed.length === 0) return null;
+  const commits = manifest.commits ?? [];
+  if (commits.some(c => c.breaking === true)) return null;
+  return {
+    check: 'release-api-break-not-marked',
+    severity: 'warning',
+    message: `Public API has ${removed.length} removed and ${changed.length} changed entr${removed.length + changed.length === 1 ? 'y' : 'ies'}, but no commit in the release range is marked breaking.`,
+    details: {
+      removed_count: removed.length,
+      changed_count: changed.length,
+      api_examples: [
+        ...removed.slice(0, 3).map(e => `removed: ${e.fqn}`),
+        ...changed.slice(0, 3).map(e => `changed: ${e.fqn}`),
+      ],
+      commit_subjects: commits.slice(0, 3).map(c => `${(c.hash ?? '').slice(0, 7)} ${c.type ?? '?'}${c.scope ? `(${c.scope})` : ''}: ${c.subject ?? ''}`.trim()),
+      hint: 'Strict SemVer would call this a missed major bump. Re-author the offending commit with a `!` marker and `BREAKING CHANGE:` footer, or confirm the api-diff entries are not actually public surface.',
+    },
+  };
+}
+
 async function checkChangelogClaimsUnbacked({ inputs, runApiDiff, manifest }) {
   if (!inputs.paths.some(p => /(?:^|\/)CHANGELOG\.md$/i.test(p))) return [];
   const changelogPath = inputs.paths.find(p => /(?:^|\/)CHANGELOG\.md$/i.test(p));
@@ -351,6 +376,7 @@ export async function runSmellChecks({
   add(checkConventionalMalformed({ message }));
   add(checkScopeMismatch({ message, inputs }));
   add(checkUnrelatedAreaBundling({ inputs, thresholdTopLevelDirs }));
+  add(checkReleaseApiBreakNotMarked({ manifest: resolvedManifest }));
   addAll(await checkChangelogMissesBreakingChange({ inputs, runApiDiff, manifest: resolvedManifest }));
   addAll(await checkChangelogClaimsUnbacked({ inputs, runApiDiff, manifest: resolvedManifest }));
 

@@ -51,13 +51,66 @@ function commitsInRange(range) {
     });
 }
 
-export function computeBump() {
+// Apply strict-SemVer increment with optional pre-release identifier.
+// - kind: 'major' | 'minor' | 'patch'
+// - prereleaseId: e.g. 'rc', 'alpha', 'beta' — when present, produces a pre-release version.
+// Behaviour:
+//   prev is stable, prereleaseId set        → premajor/preminor/prepatch with id (e.g. v0.3.0 + premajor rc → v1.0.0-rc.0)
+//   prev is pre-release, prereleaseId set   → prerelease bump, optionally renaming the id (e.g. v1.0.0-rc.0 → v1.0.0-rc.1; v1.0.0-rc.0 + beta → v1.0.0-beta.0)
+//   prev is pre-release, no prereleaseId    → graduate to stable: kind is ignored; the target stable version is whatever the pre-release encodes (e.g. v1.0.0-rc.5 → v1.0.0)
+//   prev is stable, no prereleaseId         → plain kind increment (the original path)
+export function applyBump(prev, kind, prereleaseId) {
+  const base = prev ? prev.replace(/^v/, '') : '0.0.0';
+  const coerced = semver.coerce(base);
+  const source = semver.parse(base) ?? semver.parse(coerced?.version) ?? semver.parse('0.0.0');
+  const sourceStr = source.version;
+  const isPrev_Prerelease = source.prerelease.length > 0;
+
+  let nextRaw;
+  if (prereleaseId) {
+    if (isPrev_Prerelease) {
+      nextRaw = semver.inc(sourceStr, 'prerelease', prereleaseId);
+    } else {
+      nextRaw = semver.inc(sourceStr, `pre${kind}`, prereleaseId);
+    }
+  } else if (isPrev_Prerelease) {
+    // Graduate: drop the pre-release identifier; the stable target is the X.Y.Z that the pre-release encodes.
+    nextRaw = `${source.major}.${source.minor}.${source.patch}`;
+  } else {
+    nextRaw = semver.inc(sourceStr, kind);
+  }
+  return `v${nextRaw}`;
+}
+
+export function computeBump(options = {}) {
+  const prereleaseId = options.prereleaseId || null;
+  const bumpOverride = options.bumpOverride || null;
+  if (bumpOverride && !['major', 'minor', 'patch'].includes(bumpOverride)) {
+    throw new Error(`bumpOverride must be one of major|minor|patch (got "${bumpOverride}")`);
+  }
   const prev = lastTag();
   const range = prev ? `${prev}..HEAD` : 'HEAD';
   const commits = commitsInRange(range);
   const today = new Date().toISOString().slice(0, 10);
+  const prevIsPrerelease = prev ? (semver.prerelease(prev.replace(/^v/, '')) || []).length > 0 : false;
 
   if (commits.length === 0) {
+    if (bumpOverride) {
+      const next = applyBump(prev, bumpOverride, prereleaseId);
+      return {
+        previous_version: prev,
+        next_version: next,
+        bump_kind: bumpOverride,
+        bump_reason: `no commits since last tag; explicit --bump ${bumpOverride}`,
+        release_date: today,
+        commits: [],
+        api_diff: { added: [], removed: [], changed: [] },
+        breaking_changes: [],
+        prerelease_id: prereleaseId,
+        previous_is_prerelease: prevIsPrerelease,
+        bump_override: bumpOverride,
+      };
+    }
     return {
       previous_version: prev,
       next_version: prev,
@@ -67,6 +120,8 @@ export function computeBump() {
       commits: [],
       api_diff: { added: [], removed: [], changed: [] },
       breaking_changes: [],
+      prerelease_id: prereleaseId,
+      previous_is_prerelease: prevIsPrerelease,
     };
   }
 
@@ -84,7 +139,10 @@ export function computeBump() {
   const feats = filtered.filter(c => c.type === 'feat' && !c.breaking);
 
   let kind, reason;
-  if (breaking.length > 0) {
+  if (bumpOverride) {
+    kind = bumpOverride;
+    reason = `explicit --bump ${bumpOverride}`;
+  } else if (breaking.length > 0) {
     kind = 'major';
     reason = `${breaking.length} breaking change${breaking.length > 1 ? 's' : ''}`;
   } else if (feats.length > 0) {
@@ -95,10 +153,13 @@ export function computeBump() {
     reason = `${filtered.length} non-breaking, non-feat commit${filtered.length > 1 ? 's' : ''}`;
   }
 
-  const base = prev ? prev.replace(/^v/, '') : '0.0.0';
-  const coerced = semver.coerce(base);
-  const nextRaw = semver.inc(coerced ? coerced.version : '0.0.0', kind);
-  const next = `v${nextRaw}`;
+  const next = applyBump(prev, kind, prereleaseId);
+  if (prereleaseId) {
+    reason = `${reason}; pre-release id "${prereleaseId}"${prevIsPrerelease ? ' (incremented)' : ' (entered)'}`;
+  } else if (prevIsPrerelease) {
+    reason = `${reason}; graduating ${prev} → stable (commit signal "${kind}" is informational only)`;
+    kind = 'graduate';
+  }
 
   return {
     previous_version: prev,
@@ -113,12 +174,40 @@ export function computeBump() {
       subject: c.subject,
       description: c.breaking_description,
     })),
+    prerelease_id: prereleaseId,
+    previous_is_prerelease: prevIsPrerelease,
   };
+}
+
+function parseCliOptions(argv) {
+  const out = {};
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--prerelease' || a === '--pre') {
+      const next = argv[i + 1];
+      if (!next || next.startsWith('--')) {
+        process.stderr.write(`error: ${a} requires an identifier (e.g. ${a} rc)\n`);
+        process.exit(2);
+      }
+      out.prereleaseId = next;
+      i++;
+    } else if (a === '--bump') {
+      const next = argv[i + 1];
+      if (!next || !['major', 'minor', 'patch'].includes(next)) {
+        process.stderr.write(`error: --bump requires major|minor|patch (got "${next ?? ''}")\n`);
+        process.exit(2);
+      }
+      out.bumpOverride = next;
+      i++;
+    }
+  }
+  return out;
 }
 
 const isMain = process.argv[1] && process.argv[1].replace(/\\/g, '/').endsWith('compute-bump.js');
 if (isMain) {
-  const manifest = computeBump();
+  const cli = parseCliOptions(process.argv.slice(2));
+  const manifest = computeBump(cli);
   const apply = process.argv.includes('--apply');
   console.log(JSON.stringify(manifest, null, 2));
   if (apply && manifest.next_version && manifest.bump_kind !== 'none') {

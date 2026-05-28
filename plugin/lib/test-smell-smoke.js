@@ -276,6 +276,77 @@ async function scenarioBundlingWithChangelogSkipped() {
   });
 }
 
+async function scenarioReleaseApiBreakNotMarked() {
+  await withRepo(async (repo) => {
+    // Manifest reports a removed public API entry, but the only commit is a `fix:` with breaking=false.
+    writeFileSync(join(repo, 'a.txt'), 'x\n');
+    git(repo, 'add', 'a.txt');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'fix: tidy up Player internals',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+      manifest: {
+        commits: [
+          { type: 'fix', scope: null, subject: 'tidy up Player internals', body: '', breaking: false, hash: 'aaaaaaa' },
+        ],
+        api_diff: {
+          added: [],
+          removed: [{ kind: 'method', fqn: 'Foo.Bar(int)', signature: 'public void Bar(int)' }],
+          changed: [],
+        },
+      },
+    });
+    assertContains('scenarioReleaseApiBreakNotMarked', checkIds(result), ['release-api-break-not-marked']);
+  });
+}
+
+async function scenarioReleaseApiBreakWithMarkerClean() {
+  await withRepo(async (repo) => {
+    // Same api-diff entry as above, but a `feat!:` commit (breaking=true) covers it.
+    writeFileSync(join(repo, 'a.txt'), 'x\n');
+    git(repo, 'add', 'a.txt');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'feat!: drop Foo.Bar(int)\n\nBREAKING CHANGE: Foo.Bar(int) removed; migrate to Foo.Baz(int, bool).\n',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+      manifest: {
+        commits: [
+          { type: 'feat', scope: null, subject: 'drop Foo.Bar(int)', body: '', breaking: true, hash: 'bbbbbbb' },
+        ],
+        api_diff: {
+          added: [],
+          removed: [{ kind: 'method', fqn: 'Foo.Bar(int)', signature: 'public void Bar(int)' }],
+          changed: [],
+        },
+      },
+    });
+    assertNotContains('scenarioReleaseApiBreakWithMarkerClean', checkIds(result), ['release-api-break-not-marked']);
+  });
+}
+
+async function scenarioReleaseEmptyApiDiffClean() {
+  await withRepo(async (repo) => {
+    // Empty api-diff + `fix:` commit → nothing to flag.
+    writeFileSync(join(repo, 'a.txt'), 'x\n');
+    git(repo, 'add', 'a.txt');
+    const inputs = getStagedInputs();
+    const result = await runSmellChecks({
+      message: 'fix: small internal cleanup',
+      inputs,
+      runApiDiff: fakeApiDiff(),
+      manifest: {
+        commits: [
+          { type: 'fix', scope: null, subject: 'small internal cleanup', body: '', breaking: false, hash: 'ccccccc' },
+        ],
+        api_diff: { added: [], removed: [], changed: [] },
+      },
+    });
+    assertNotContains('scenarioReleaseEmptyApiDiffClean', checkIds(result), ['release-api-break-not-marked']);
+  });
+}
+
 async function scenarioChangelogClaimsUnbacked() {
   await withRepo(async (repo) => {
     // Bullet text uses keyword "quantum" that appears in NO commit subject/body and NO api-diff.
@@ -324,6 +395,9 @@ const scenarios = [
   ['scope match → clean', scenarioScopeMatchClean],
   ['unrelated-area-bundling', scenarioUnrelatedAreaBundling],
   ['bundling skipped on CHANGELOG release commit → clean', scenarioBundlingWithChangelogSkipped],
+  ['release-api-break-not-marked', scenarioReleaseApiBreakNotMarked],
+  ['release api break + marker → clean', scenarioReleaseApiBreakWithMarkerClean],
+  ['release empty api-diff → clean', scenarioReleaseEmptyApiDiffClean],
   ['changelog-claims-unbacked', scenarioChangelogClaimsUnbacked],
   ['changelog claims backed → clean', scenarioChangelogClaimsBackedClean],
 ];

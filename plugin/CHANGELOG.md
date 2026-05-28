@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-05-28
+
+### Added
+
+- Pre-release identifier flow via `--prerelease <id>` (alias `--pre <id>`) on `build-manifest.js` and `compute-bump.js`. Drives the canonical strict-SemVer pre-release lifecycle: stable → `vX.Y.Z-id.0` (first RC), pre-release → `vX.Y.Z-id.N+1` (next RC in series), pre-release → stable (graduate by re-running without the flag). The manifest carries `prerelease_id` and `previous_is_prerelease` fields so the orchestrator can present an honest plan, and `bump_kind: 'graduate'` is reported when a pre-release version drops its identifier on its way to stable. `release.md` documents the full flow with a transition table. (v0.3.0)
+- `--bump major|minor|patch` flag on `build-manifest.js` and `compute-bump.js` as the documented escape hatch for cases the manifest legitimately cannot infer — typically non-Unity projects (where api-diff returns null) with zero commits in range and staged work that is conceptually a feature or breaking change. Short-circuits both the api-diff promotion and the staged-work-→-patch fallback. The orchestrating LLM does **not** invent this flag; the user passes it explicitly to `/release`. Combinable with `--prerelease`. (v0.3.0)
+- New `applyBump(prev, kind, prereleaseId)` helper exported from `compute-bump.js` so both `compute-bump` and `build-manifest`'s api-diff promotion path use one canonical version-arithmetic function. Smoke-tested across 13 stable/pre-release/graduation cases. (v0.3.0)
+- `release-api-break-not-marked` smell check (`lib/smell.js`) — fires when api-diff reports `removed` or `changed` entries but no commit in the manifest range carries a breaking marker. Catches `fix:` commits that secretly break the public API because the author forgot the `!` marker. Warning-severity; advisory only, not a hard fail. Wired into `runSmellChecks`. Smoke-tested across 3 new scenarios. (v0.3.0)
+- `classifyRemovedAddedPairs` helper (`lib/classify-api-diff.js`) — pairs api-diff `removed` + `added` entries by their `Type.MethodName(` FQN prefix and detects strict prefix-superset signature extensions (e.g. `Foo(int)` → `Foo(int, bool = false)`). Such pairs are source-compatible and reclassified out of the breaking-change tally. 52-case smoke test (`test-api-diff-pair-smoke.js`) covers real removals, type-mismatch breaks, multi-level additive extensions, generics with embedded commas, constructors, and overload-soup tiebreaking. (v0.3.0)
+
+### Changed
+
+- The plugin now applies strict SemVer 2.0.0 end-to-end. Pre-release status is expressed via semver pre-release identifiers (e.g. `v1.0.0-rc.1`) — not by sitting at `0.x.y`. The "minor=breaking, patch=everything-else" pre-1.0 shortcut is explicitly not supported; `release.md` directs consumers who want that convention elsewhere. (v0.3.0)
+- `release.md` Step 1 names the manifest as the single authoritative source of `bump_kind` and `next_version`. The orchestrating LLM is forbidden from overriding the manifest on its own judgment; the only legitimate fixes are upstream (in `parse-commits.js`, `compute-bump.js`, or `build-manifest.js`'s promotion) or via the explicit user-driven `--bump` flag. Matching guard added under **Never**. (v0.3.0)
+- New section in `release.md`: "Tags vs GitHub Releases." Tags are versions (every release gets one); GitHub Releases are reserved for milestones / RCs and are not auto-created. (v0.3.0)
+- `build-manifest.js` promotion logic now consumes `classifyRemovedAddedPairs` output: major fires on `realRemoved` (post-additive-pair reclassification) or any `changed` entry; minor fires when the only post-classification signal is `effectiveAdded`. `bump_reason` notes the additive-pair count when applicable. (v0.3.0)
+
+### Fixed
+
+- `api-diff.js` materializeGitRef previously passed `-- '*.cs'` as a pathspec to `git ls-tree -r --name-only`. ls-tree's pathspec semantics don't match ls-files' — `ls-tree -r -- '*.cs'` returned zero files because the glob doesn't traverse subdirectories the way the caller expected. Every prior api-diff was therefore comparing an empty previous-ref tree against the worktree, surfacing the **entire** public API as "added" on every run. This was invisible while the plugin only used api-diff as a hint and let commit signals drive bumps, but became load-bearing once `build-manifest.js` started promoting zero-commit + api-diff-additions to `minor`. Fix: drop the pathspec from both `ls-tree` and `ls-files` calls; let `isIncludedCsPath` filter on extension in JS, which it already did. (v0.3.0)
+- `build-manifest.js` zero-commit promotion now classifies per strict semver based on api-diff content: removals or changes → **major** (likely breaking), additions only → **minor** (backwards-compatible feature). Previously promoted everything to `patch`, which was wrong under strict semver and led at least one dogfood release (BTS v0.2.0 → v0.3.0) to need an out-of-band override from the orchestrating LLM. (v0.3.0)
+- `build-manifest.js` now also promotes zero-commit + empty-api-diff + staged work to **patch** (e.g. asset-only or internal-refactor releases). Previously these stayed at `bump_kind: none` and forced the orchestrator to either invent a version or abort. (v0.3.0)
+- Additive-parameter false positive: when a C# method gains an optional default-valued parameter, the FQN changes (parameter types are baked into it), so the api-diff surfaces 1 removed + 1 added. The conservative promotion treated this as major. The new `classifyRemovedAddedPairs` detects the additive-prefix-superset shape and reclassifies the pair as a minor-bump-worthy addition, leaving only genuine removals on the major-bump tally. (v0.3.0)
+
 ## [0.2.0] - 2026-05-28
 
 ### Added

@@ -60,10 +60,13 @@ function isIncludedCsPath(relPath) {
 }
 
 function materializeGitRef(ref, destDir) {
-  // List tracked .cs files at the ref.
+  // List tracked files at the ref. We do NOT pass a `-- '*.cs'` pathspec here: ls-tree's pathspec
+  // semantics differ from ls-files — with `-r -- '*.cs'` git ls-tree returns zero rows because
+  // the glob does not traverse into subdirectories the way callers expect. Filtering on extension
+  // is done in JS via `isIncludedCsPath`, which also enforces the dir/suffix exclusions.
   let listing;
   try {
-    listing = runGit(['ls-tree', '-r', '--name-only', '-z', ref, '--', '*.cs']);
+    listing = runGit(['ls-tree', '-r', '--name-only', '-z', ref]);
   } catch (err) {
     throw new Error(`git ls-tree failed for ref ${ref}: ${err.message}`);
   }
@@ -83,9 +86,11 @@ function materializeGitRef(ref, destDir) {
 
 function materializeWorktree(destDir) {
   // git ls-files includes tracked files and staged adds, but excludes untracked-only files.
+  // ls-files's pathspec does traverse subdirs (unlike ls-tree's), but for consistency with the
+  // ref path above — and to keep the .cs filter in one place — we list everything and filter in JS.
   let listing;
   try {
-    listing = runGit(['ls-files', '-z', '--', '*.cs']);
+    listing = runGit(['ls-files', '-z']);
   } catch (err) {
     throw new Error(`git ls-files failed: ${err.message}`);
   }
