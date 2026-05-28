@@ -1,13 +1,16 @@
 {
   "name": "claude-release",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output. Seven slash commands; only commit and changelog touch an LLM.",
+  "displayName": "Claude Release",
   "author": {
-    "name": "LlamaBrain"
+    "name": "Michael Tiller",
+    "email": "metagrue@gmail.com",
+    "url": "https://github.com/LlamaBrain"
   },
-  "repository": "https://github.com/LlamaBrain/claude-release",
   "homepage": "https://github.com/LlamaBrain/claude-release",
-  "license": "UNLICENSED",
+  "repository": "https://github.com/LlamaBrain/claude-release",
+  "license": "Apache-2.0",
   "keywords": [
     "claude-code",
     "release",

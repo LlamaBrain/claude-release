@@ -1,18 +1,18 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "claude-release",
+  "name": "llamabrain-release",
   "owner": {
-    "name": "LlamaBrain"
+    "name": "Michael Tiller"
+  },
+  "metadata": {
+    "description": "LlamaBrain Claude Code release tooling.",
+    "homepage": "https://github.com/LlamaBrain/claude-release"
   },
   "plugins": [
     {
       "name": "claude-release",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "source": "./plugin",
-      "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output.",
-      "author": {
-        "name": "LlamaBrain"
-      }
+      "description": "Conventional Commits -> semver -> Keep-a-Changelog release flow with manifest-verified LLM output."
     }
   ]
 }
