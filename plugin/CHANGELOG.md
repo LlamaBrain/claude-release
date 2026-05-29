@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-05-28
+
+### Fixed
+
+- **Marketplace.json version bumped from `0.2.0` to `0.3.2`.** v0.3.1 shipped with the bundling fix in `plugin/lib/`, the `plugin/VERSION` file bumped, the git tag at the right commit, and a CHANGELOG entry — but `.claude-plugin/marketplace.json` still advertised `0.2.0`. Claude Code's plugin system reads the marketplace version from marketplace.json, so consumers running `/plugin update claude-release` were told "already at the latest version (0.2.0)" and got the unfixed code path. Literally the same shape of bug as ADR-0009 in the captain-sdlc/ docs set — the *published* artifact told a different story than the *source*, *despite* writing the ADR to catch exactly this — caught one publish-version surface but not the other. Treating this as a real lesson: there is more than one "version" field, and a release-readiness check that diffs `package.json` / `VERSION` / `plugin.json` / `marketplace.json` for the *current* tool would have caught it. Adding that check is on the v0.4.0 list.
+
 ## [0.3.1] - 2026-05-28
 
 ### Fixed
