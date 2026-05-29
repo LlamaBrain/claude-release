@@ -1,0 +1,52 @@
+name: CI
+
+# Deterministic regression guard. Runs only the no-LLM surface of the plugin —
+# the gate, the bundle-freshness check, and the smoke suites — so it needs no
+# Anthropic API key. The two LLM-driven commands (/commit, /changelog) are
+# verified by eye at release time and are intentionally out of scope here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Gate, bundle sync, and smoke tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
+
+      # The api-diff smoke test builds the Roslyn-backed ApiDiff tool (net8.0).
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - run: npm ci
+
+      - name: Release-readiness gate (version surfaces + self-contained bundles)
+        run: npm run check:release
+
+      - name: plugin/lib is in sync with src/
+        run: |
+          npm run bundle
+          if ! git diff --quiet -- plugin/lib; then
+            echo "::error::plugin/lib is stale — run 'npm run bundle' and commit the result."
+            git --no-pager diff --stat -- plugin/lib
+            exit 1
+          fi
+
+      - name: Smoke tests
+        run: |
+          node tests/test-smell-smoke.js
+          node tests/test-api-diff-pair-smoke.js
+          node tests/test-release-gates-smoke.js
+          node tests/test-api-diff-smoke.js
