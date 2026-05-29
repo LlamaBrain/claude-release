@@ -15,6 +15,7 @@ Thumbs.db
 
 # Local consumer config (not yet implemented; reserved)
 .claude-release.local.json
+scratch.md
 
 # Promptbook setup banner (occasionally created via shell redirection; not part of the project)
 CON
