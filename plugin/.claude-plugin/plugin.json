@@ -10,7 +10,7 @@
   },
   "homepage": "https://github.com/LlamaBrain/claude-release",
   "repository": "https://github.com/LlamaBrain/claude-release",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "keywords": [
     "claude-code",
     "release",

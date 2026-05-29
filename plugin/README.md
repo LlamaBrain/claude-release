@@ -9,13 +9,7 @@ Conventional Commits → semver → Keep-a-Changelog release flow for [Claude Co
 /plugin install claude-release@llamabrain-release
 ```
 
-Then install the Node deps that the lib uses:
-
-```bash
-cd "<plugin-install-path>/lib" && npm install
-```
-
-Requires Node ≥ 18. (Plugin-install-path varies by Claude Code's plugin cache; see `/plugin list`.)
+Requires Node ≥ 18. No `npm install` step — `lib/` ships pre-bundled with its dependencies inlined, so the plugin runs as soon as it is installed.
 
 For the optional API-diff feature, the .NET SDK (`dotnet` on `PATH`) is required; first run does a one-time NuGet restore.
 
@@ -51,7 +45,7 @@ The LLM writes prose; the script adjudicates truth. That cross-check is the actu
 - **Conditional code (`#if UNITY_EDITOR`, platform symbols, custom defines) is parsed with default preprocessor settings**, so conditional APIs may be over-reported. Project-aware parsing is a future concern.
 - Falls back silently (single stderr warning) when `dotnet` is absent or any step fails. Commands then degrade to commit-message signals — the same path non-C# repos take.
 
-A scripted smoke test lives at `lib/test-api-diff-smoke.js` (`node lib/test-api-diff-smoke.js` from the plugin root).
+A scripted smoke test for it lives in the source repo at `tests/test-api-diff-smoke.js`.
 
 ## Build-gate (Unity-specific path)
 
