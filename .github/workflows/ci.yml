@@ -38,9 +38,12 @@ jobs:
       - name: plugin/lib is in sync with src/
         run: |
           npm run bundle
-          if ! git diff --quiet -- plugin/lib; then
+          # Compare content only: esbuild marks shebang outputs executable (0755),
+          # but the blobs committed from Windows (core.fileMode=false) are 0644, so a
+          # mode-sensitive diff false-positives on Linux. We only care about content.
+          if ! git -c core.fileMode=false diff --quiet -- plugin/lib; then
             echo "::error::plugin/lib is stale — run 'npm run bundle' and commit the result."
-            git --no-pager diff --stat -- plugin/lib
+            git -c core.fileMode=false --no-pager diff --stat -- plugin/lib
             exit 1
           fi
 
