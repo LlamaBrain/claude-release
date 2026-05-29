@@ -71,3 +71,7 @@ A scripted smoke test for it lives in the source repo at `tests/test-api-diff-sm
 ## Roadmap
 
 See `ROADMAP.md` for shipped and planned work.
+
+## Part of Captain SDLC
+
+claude-release is the **release blade** of [Captain SDLC](https://github.com/LlamaBrain/captain-sdlc), an AI-driven SDLC tooling pipeline: independent tools that share conventions (trace schemas, fenced-block formats), not code, so each can be adopted on its own. Sibling tools: [claude-interrogate](https://github.com/michael-tiller/claude-interrogate-src) (design), [ai-test-harness](https://github.com/LlamaBrain/ai-test-harness) (QA), and [MToolKit](https://github.com/michael-tiller/MToolKit) (runtime foundation).
