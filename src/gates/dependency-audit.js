@@ -30,18 +30,19 @@ export function classifyAudit(auditJson, { blocking = BLOCKING_LEVELS } = {}) {
   return { blockingTotal, counts };
 }
 
-// npm ships as npm.cmd on Windows; execFileSync can't launch a .cmd directly.
-const NPM_BIN = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-
 // `npm audit` exits non-zero when advisories exist but still prints the JSON
-// report to stdout; recover stdout from the thrown error in that case.
+// report to stdout; recover stdout from the thrown error in that case. On
+// Windows `npm` resolves to npm.cmd, and recent Node refuses to spawn a .cmd
+// through execFileSync without a shell — so route through the shell there. The
+// argv is fixed and carries no user input, so shell interpolation is not a risk.
 function defaultRunAudit(repoRoot) {
   let out;
   try {
-    out = execFileSync(NPM_BIN, ['audit', '--json'], {
+    out = execFileSync('npm', ['audit', '--json'], {
       cwd: repoRoot,
       encoding: 'utf8',
       stdio: ['ignore', 'pipe', 'pipe'],
+      shell: process.platform === 'win32',
     });
   } catch (err) {
     out = err.stdout;

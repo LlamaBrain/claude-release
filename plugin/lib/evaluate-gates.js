@@ -264,14 +264,14 @@ function classifyAudit(auditJson, { blocking = BLOCKING_LEVELS } = {}) {
   }
   return { blockingTotal, counts };
 }
-var NPM_BIN = process.platform === "win32" ? "npm.cmd" : "npm";
 function defaultRunAudit(repoRoot) {
   let out;
   try {
-    out = execFileSync(NPM_BIN, ["audit", "--json"], {
+    out = execFileSync("npm", ["audit", "--json"], {
       cwd: repoRoot,
       encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"]
+      stdio: ["ignore", "pipe", "pipe"],
+      shell: process.platform === "win32"
     });
   } catch (err) {
     out = err.stdout;

@@ -1,0 +1,16 @@
+# Release-gate config for claude-release's own /release — Captain SDLC Seam 3.
+# (seam-release-gates.md, "Where gate definitions live".)
+#
+# claude-release has no ATH smoke suite, so smoke_results_pass is disabled here
+# rather than left to error on a missing trace. dependency_audit runs soft
+# (severity: warn) until the audit output is trusted — the doc's minimal-cut
+# guidance — so the gate phase runs and reports during release without a flaky
+# network audit blocking the ship. Tighten to severity: block once trusted.
+schema_version: 1
+gates:
+  smoke_results_pass:
+    enabled: false
+  dependency_audit:
+    enabled: true
+    severity: warn
+    required: true
