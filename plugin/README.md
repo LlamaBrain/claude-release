@@ -6,7 +6,7 @@ Conventional Commits → semver → Keep-a-Changelog release flow for [Claude Co
 
 ```
 /plugin marketplace add LlamaBrain/claude-release
-/plugin install claude-release@claude-release
+/plugin install claude-release@llamabrain-release
 ```
 
 Then install the Node deps that the lib uses:
