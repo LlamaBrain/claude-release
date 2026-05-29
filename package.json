@@ -1,0 +1,21 @@
+{
+  "name": "claude-release-build",
+  "version": "0.3.1",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "bundle": "node ./scripts/bundle.mjs",
+    "check:release": "node ./scripts/verify-release-readiness.mjs",
+    "prepare:release": "npm run bundle && npm run check:release"
+  },
+  "dependencies": {
+    "conventional-commits-parser": "^5.0.0",
+    "semver": "^7.5.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.0"
+  }
+}

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-05-28
+
+### Fixed
+
+- **Published runtime now actually runs.** v0.1.x through v0.3.0 all shipped with `plugin/lib/*.js` files that import from `semver` and `conventional-commits-parser`, expecting consumers to have `node_modules/` populated. The `.gitignore` excluded `plugin/lib/node_modules/` with a comment ("installed via `npm install` in plugin/lib/"), but Claude Code's plugin install mechanism never runs `npm install`. Every released version up to and including v0.3.0 shipped broken — invoking any entry point (`build-manifest.js`, `audit-commits.js`, `compute-bump.js`, `smell-cli.js`, `verify-output.js`) errored with `ERR_MODULE_NOT_FOUND: semver`.
+- **Fix:** moved hand-edited sources from `plugin/lib/*.js` to `src/*.js`, added top-level `package.json` declaring `esbuild` as a build-time dependency, added `scripts/bundle.mjs` (esbuild-driven) that bundles each entry point into a self-contained ESM file with `semver` / `conventional-commits-parser` inlined. Bundled outputs land back at `plugin/lib/*.js`, so command invocations (`node lib/build-manifest.js`) keep working unchanged from the consumer's perspective. The `.NET` `dotnet/` subdirectory is preserved through the bundle's clean step (it has its own on-demand build flow via api-diff.js).
+- **Bundling-aware CLI guard** in `src/parse-commits.js`. The previous guard (`endsWith(basename of argv[1])`) was satisfied by any bundle ending in `.js`, so when `parse-commits.js` was inlined into `build-manifest.js`, parse-commits's CLI usage message printed instead of build-manifest's JSON. Replaced with explicit-basename comparison anchored to `parse-commits.js`.
+- **Build deps moved to top-level `package.json`.** `plugin/lib/package.json` and `plugin/lib/package-lock.json` are gone — they only existed to declare the runtime deps that are now inlined. Top-level `package.json` declares `semver` + `conventional-commits-parser` as `dependencies` (so esbuild can resolve them at bundle time) and `esbuild` as `devDependencies`.
+
+### Tracked as ADR-0009 in the captain-sdlc/ docs set
+
+Captured the broader lesson: every Captain SDLC tool's release-readiness check must verify the *published* artifact runs end-to-end, not just the source-repo tests. This is the third tool fix this session driven by the same shape of bug (interrogate v0.1.3/v0.1.4 had analogous gaps with command-markdown files and node_modules expectations). The discipline is conceptually Seam 4 (contract testing) applied to each tool's distribution boundary.
+
 ## [0.3.0] - 2026-05-28
 
 ### Added

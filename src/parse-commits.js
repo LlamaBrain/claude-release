@@ -46,10 +46,16 @@ export function parseCommit(raw) {
 }
 
 // CLI entry
+// Bundling-aware CLI guard: when this module is bundled into another entry
+// point (e.g., build-manifest.js), import.meta.url reflects the bundle file,
+// not parse-commits.js. The old check (endsWith basename of argv[1]) returned
+// true for any bundle that ended in any .js file, accidentally firing the CLI
+// path. The explicit-basename check pins the guard to standalone invocation.
 const isMain = (() => {
   try {
-    const url = new URL(import.meta.url);
-    return url.pathname.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop());
+    const myBasename = new URL(import.meta.url).pathname.split('/').pop();
+    const invokedBasename = process.argv[1].replace(/\\/g, '/').split('/').pop();
+    return myBasename === 'parse-commits.js' && invokedBasename === 'parse-commits.js';
   } catch { return false; }
 })();
 

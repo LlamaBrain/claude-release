@@ -1,5 +1,7 @@
-# Node deps — installed via `npm install` in plugin/lib/
-plugin/lib/node_modules/
+# Build deps (top-level + any nested) — installed via `npm install` at repo root.
+# Runtime deps for plugin/lib/ entry points are now bundled inline by scripts/bundle.mjs
+# (esbuild), so plugin/lib/node_modules/ no longer needs to exist at consumer-install time.
+node_modules/
 
 # .NET build artifacts — produced on demand by api-diff.js
 plugin/lib/dotnet/**/bin/
@@ -13,3 +15,6 @@ Thumbs.db
 
 # Local consumer config (not yet implemented; reserved)
 .claude-release.local.json
+
+# Promptbook setup banner (occasionally created via shell redirection; not part of the project)
+CON
