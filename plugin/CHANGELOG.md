@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Release-readiness gate — `scripts/verify-release-readiness.mjs`, wired to `npm run check:release` and `prepare:release`.** The script `package.json` already pointed at but that never existed. Two guards, each closing a bug class this project actually shipped: (1) **version consistency** — `plugin/VERSION` is treated as canonical and must match `.claude-plugin/marketplace.json` (the claude-release entry), `plugin/.claude-plugin/plugin.json`, `package.json`, and `package-lock.json` (root and `packages[""]`); (2) **self-contained runtime** — every bundled `plugin/lib/` entry point must exist and import nothing beyond Node builtins, so an un-inlined `semver` / `conventional-commits-parser` can never ship broken again (the `[0.3.1]` / ADR-0009 failure mode). Exits non-zero listing every problem; both guards were negative-tested. This is the release-readiness check `[0.3.2]` flagged for v0.4.0.
+- **`scripts/entry-points.mjs`** — single source of truth for the published entry-point list, shared by `scripts/bundle.mjs` (what to build) and the readiness gate (what must exist and be self-contained), so the two can never disagree about what ships.
+
+### Fixed
+
+- **Version-surface drift synced to `0.3.2`.** `plugin/.claude-plugin/plugin.json` had lagged at `0.2.0` and `package.json` / `package-lock.json` at `0.3.1`, while `plugin/VERSION`, the git tag, and `marketplace.json` were already `0.3.2` — the same multi-version-field hazard `[0.3.2]` called out. The new release-readiness gate now fails the release if these ever diverge again.
+
 ## [0.3.2] - 2026-05-28
 
 ### Fixed

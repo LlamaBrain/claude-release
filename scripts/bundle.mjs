@@ -14,20 +14,13 @@
 import { build } from "esbuild";
 import { rm, mkdir, cp } from "node:fs/promises";
 import path from "node:path";
+import { ENTRY_POINTS } from "./entry-points.mjs";
 
 const root = process.cwd();
 const srcDir = path.join(root, "src");
 const outDir = path.join(root, "plugin", "lib");
 const dotnetSrc = path.join(root, "src", "dotnet");
 const dotnetDest = path.join(outDir, "dotnet");
-
-const ENTRY_POINTS = [
-  "audit-commits.js",
-  "build-manifest.js",
-  "compute-bump.js",
-  "smell-cli.js",
-  "verify-output.js",
-];
 
 // Clean the output directory but preserve dotnet/ (it has its own build flow).
 // Approach: remove everything in plugin/lib/ then restore dotnet/.
