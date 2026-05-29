@@ -8,6 +8,7 @@ export const ENTRY_POINTS = [
   "audit-commits.js",
   "build-manifest.js",
   "compute-bump.js",
+  "evaluate-gates.js",
   "smell-cli.js",
   "verify-output.js",
 ];

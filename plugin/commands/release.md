@@ -95,6 +95,34 @@ The chore-release-after-the-fact pattern produces a noisy two-commit cluster (on
    - The reason is required (no bare flag). Reject the flag and abort if it's empty or missing.
    - The release commit body **MUST** include a `Skip-build: <reason>` footer line. This makes the override permanently auditable via `git log`. Compose the footer into the proposed commit message in Step 5.
 
+3.5. **Release gates (REQUIRED — refuses an inconsistent ship)**
+
+   After the build compiles but *before* staging, evaluate the Captain SDLC release gates against HEAD. They read upstream signals — ATH smoke results (from the `.captain-sdlc/` trace) and a dependency audit — and refuse a release that contradicts them. Like the build-gate, they run before anything is staged, so a block costs zero churn. (Seam 3 — see `seam-release-gates.md` in the Captain SDLC docs.)
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/lib/evaluate-gates.js" > /tmp/release-gates.json; echo "exit: $?"
+   ```
+
+   Forward any override flags the user passed to `/release` verbatim, e.g.:
+
+   ```bash
+   node "${CLAUDE_PLUGIN_ROOT}/lib/evaluate-gates.js" \
+     --force-release --override 'smoke_results_pass:known flake, manually verified' \
+     > /tmp/release-gates.json; echo "exit: $?"
+   ```
+
+   The tool prints a JSON summary (`decision`, an `aggregate` verdict in the standard gate shape, each gate's verdict, and `overridden_blockers`) and exits:
+   - **exit 0** — `decision: "proceed"`. All gates pass, or every blocking failure was explicitly overridden. Continue to Step 4.
+   - **exit 1** — `decision: "blocked"`. A blocking gate failed and was not overridden. **Print the failing gate(s) and their `reason` verbatim. Do not stage anything. Abort the flow.** The user fixes the upstream problem and re-invokes, OR re-invokes with an explicit per-gate `--override`.
+   - **exit 2** — usage/config error (empty override reason, override of a non-blocking gate, `--override` without `--force-release`, or a malformed `.captain-sdlc/release-gates.yaml`). Surface the stderr message; do not proceed until it's corrected.
+
+   Gate config is read from `.captain-sdlc/release-gates.yaml` if present; absent, defaults apply (`smoke_results_pass` blocking; `dependency_audit` blocking, but `not_applicable` when there's no `package.json`).
+
+   **If any `--override` was used (exit 0 with a non-empty `overridden_blockers`):**
+   - The reason is required and was already validated by the tool.
+   - The release commit body **MUST** include one `Gate-override: <gate> <reason>` footer line per overridden gate — permanently auditable via `git log`, mirroring `Skip-build:`. Compose these into the proposed commit message in Step 5.
+   - The per-release `release.gate.summary` / `release.gate.override` trace events are a planned fast-follow (now that M2 ships the trace substrate); this cut records the override in the commit message only.
+
 4. **Stage the release artifacts alongside the work**
 
    ```bash
@@ -116,6 +144,7 @@ The chore-release-after-the-fact pattern produces a noisy two-commit cluster (on
      - For releases that introduce new functionality: `feat: <subject>` (or `feat(<scope>):`)
      - For pure maintenance/cleanup releases with no staged work: `chore(release): <next_version>`
    - If `--skip-build` was used, the commit body MUST include the `Skip-build: <reason>` footer — show it to the user as part of the plan.
+   - If any release gate was overridden, the commit body MUST include a `Gate-override: <gate> <reason>` footer per override — show them as part of the plan.
    - Annotated tag: `<next_version>` with message `Release <next_version>`
 
 6. **Apply in order:** commit, then tag.
@@ -139,6 +168,7 @@ The chore-release-after-the-fact pattern produces a noisy two-commit cluster (on
 - Force-push.
 - Skip git hooks.
 - Bypass the build-gate without a `--skip-build "<reason>"` invocation. A silently-skipped gate is a gate that decays.
+- Bypass a *blocking* release gate without an explicit, reason-carrying `--override`. There is no force-everything flag; override per gate, and the reason lands in the commit body.
 - Override `manifest.bump_kind` or `manifest.next_version` on your own semver judgment. The manifest is authoritative; see Step 1 for the only valid override conditions.
 
 ## Why changelog-before-commit
