@@ -78,6 +78,10 @@ node tests/test-api-diff-smoke.js       # Roslyn API differ (requires dotnet)
 
 This repo releases itself with its own `/claude-release:release`: the changelog entry and version bumps ship in the **same commit** as the work, followed by an annotated tag. It never pushes — that stays a deliberate, manual `git push --follow-tags origin main`. See [`plugin/CHANGELOG.md`](plugin/CHANGELOG.md) for history and [`plugin/ROADMAP.md`](plugin/ROADMAP.md) for shipped and planned work.
 
+## Part of Captain SDLC
+
+claude-release is the **release blade** of [Captain SDLC](https://github.com/LlamaBrain/captain-sdlc), an AI-driven SDLC tooling pipeline: independent tools that share conventions (trace schemas, fenced-block formats), not code, so each can be adopted on its own. Sibling tools: [claude-interrogate](https://github.com/michael-tiller/claude-interrogate-src) (design), [ai-test-harness](https://github.com/LlamaBrain/ai-test-harness) (QA), and [MToolKit](https://github.com/michael-tiller/MToolKit) (runtime foundation).
+
 ## License
 
 Released under the [MIT License](LICENSE.md). © 2026 Michael Tiller.
