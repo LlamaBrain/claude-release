@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const PLUGIN_LIB = resolve(dirname(fileURLToPath(import.meta.url)));
+const PLUGIN_LIB = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'plugin', 'lib');
 const APIDIFF_PROJECT = join(PLUGIN_LIB, 'dotnet', 'ApiDiff');
 const APIDIFF_DLL = join(APIDIFF_PROJECT, 'bin', 'Release', 'net8.0', 'ApiDiff.dll');
 

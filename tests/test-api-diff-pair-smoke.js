@@ -9,7 +9,7 @@ import {
   isStrictAdditiveExtension,
   splitFqnAtOpenParen,
   splitParamTuple,
-} from './classify-api-diff.js';
+} from '../src/classify-api-diff.js';
 
 let failed = 0;
 let passed = 0;

@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 const HERE = resolve(dirname(fileURLToPath(import.meta.url)));
 
 // Import after we may need to chdir; library calls git in CWD.
-const { runSmellChecks, getStagedInputs } = await import('./smell.js');
+const { runSmellChecks, getStagedInputs } = await import('../src/smell.js');
 
 function git(repo, ...args) {
   return execFileSync('git', args, {
