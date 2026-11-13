@@ -35,4 +35,31 @@ assert.throws(() => prepareArtifacts({...request, manifest:{...manifest, next_ve
 const stable = prepareArtifacts({...request, manifest:{...manifest,next_version:'v1.1.0'}, surfaces:surfaces.map(s=>({...s,content:outputs[s.path]})), changelog:{...request.changelog,content:outputs['docs/milestone.md']}});
 assert.equal(stable.VERSION, '1.1.0\n');
 assert.match(stable['docs/milestone.md'], /\[v1\.1\.0\]/);
+// Doxygen page titles are valid milestone-changelog headers. Historic prose and
+// even duplicate legacy Unreleased headings must survive byte-for-byte.
+for (const title of ['@page milestone_changes Milestone change history', '\\page milestone_changes Milestone change history']) {
+  const tail = '\r\nHistorical introduction.\r\n\r\n## [Unreleased]\r\n\r\n- Retained pending item.\r\n\r\n## [v0.9.0] - 2025-01-01\r\n\r\n- Older release.\r\n\r\n## [Unreleased]\r\n\r\n- Legacy section.\r\n';
+  const content = title + '\r\n' + tail;
+  const doxygenRequest = {...request, changelog:{path:'docs/milestone.md',content}};
+  const generated = prepareArtifacts(doxygenRequest);
+  const result = generated['docs/milestone.md'];
+  assert.ok(result.startsWith(title + '\r\n'));
+  assert.ok(result.startsWith(title + '\r\n\r\nHistorical introduction.\r\n\r\n'), 'Doxygen introduction is preserved');
+  const historicalSections = tail.slice(tail.indexOf('## [Unreleased]'));
+  assert.ok(result.endsWith(historicalSections), 'existing Doxygen changelog sections are preserved');
+  assert.equal(result.split('## [Unreleased]').length - 1, 2);
+  assert.equal(result.split('## [v1.1.0-rc.0]').length - 1, 1);
+  assert.deepEqual(prepareArtifacts({...doxygenRequest,
+    surfaces:surfaces.map(surface=>({...surface,content:generated[surface.path]})),
+    changelog:{...doxygenRequest.changelog,content:result}}), generated);
+  const promoted = prepareArtifacts({...doxygenRequest,
+    manifest:{...manifest,next_version:'v1.1.0'},
+    surfaces:surfaces.map(surface=>({...surface,content:generated[surface.path]})),
+    changelog:{...doxygenRequest.changelog,content:result}});
+  assert.ok(promoted['docs/milestone.md'].endsWith(historicalSections));
+  assert.equal(promoted['docs/milestone.md'].split('## [v1.1.0]').length - 1, 1);
+}
+for (const content of ['@page milestone_changes\n', '@page\n', '@other title\n', '## Changelog\n']) {
+  assert.throws(()=>prepareArtifacts({...request,changelog:{...request.changelog,content}}), /changelog must start with a title/);
+}
 console.log('release artifact preparation passed');

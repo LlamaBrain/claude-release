@@ -2617,12 +2617,15 @@ function computeBump(options = {}) {
   if (bumpOverride && !["major", "minor", "patch"].includes(bumpOverride)) {
     throw new Error(`bumpOverride must be one of major|minor|patch (got "${bumpOverride}")`);
   }
+  if (options.advanceBaseline !== void 0 && typeof options.advanceBaseline !== "boolean") throw new Error("advanceBaseline must be boolean");
+  if (options.advanceBaseline && !options.baselineRef) throw new Error("advancing requires an explicit initial baseline");
   const explicitBaseline = Boolean(options.baseline || options.baselineRef);
   if (Boolean(explicitBaseline) !== Boolean(options.target) || options.baseline && options.baselineRef) throw new Error("one baseline and target must be supplied together");
   if (!options.baselineRef && (options.baselineVersion || options.baselineSurface || options.baselinePointer)) throw new Error("initial baseline version and surface require baselineRef");
   let prev = lastTag();
   let baselineRevision = null;
   let baselineKind = null;
+  let initialBaseline = null, baselineTag = null, baselineTagObject = null;
   let targetRevision = git("rev-parse", "--verify", "HEAD^{commit}");
   let range;
   if (options.baselineRef) {
@@ -2646,6 +2649,29 @@ function computeBump(options = {}) {
       git("merge-base", "--is-ancestor", baselineRevision, targetRevision);
     } catch {
       throw new Error("baseline is not an ancestor of target");
+    }
+    if (options.advanceBaseline) {
+      initialBaseline = { revision: baselineRevision, version: options.baselineVersion, surface: options.baselineSurface, ...options.baselinePointer !== void 0 ? { pointer: options.baselinePointer } : {} };
+      const candidates = git("tag", "--merged", targetRevision, "--list").split(/\r?\n/).flatMap((tag) => {
+        if (!import_semver.default.valid(tag) || import_semver.default.prerelease(tag) || !import_semver.default.gt(tag, options.baselineVersion)) return [];
+        const object = git("rev-parse", "--verify", "refs/tags/" + tag);
+        if (git("cat-file", "-t", object) !== "tag") return [];
+        const revision = git("rev-parse", "--verify", object + "^{commit}");
+        try {
+          git("merge-base", "--is-ancestor", initialBaseline.revision, revision);
+          git("merge-base", "--is-ancestor", revision, targetRevision);
+        } catch {
+          return [];
+        }
+        return [{ tag, object, revision }];
+      }).sort((a, b) => import_semver.default.rcompare(a.tag, b.tag));
+      if (candidates.length > 1 && import_semver.default.compare(candidates[0].tag, candidates[1].tag) === 0) throw new Error("ambiguous latest stable SemVer tags after initial baseline");
+      if (candidates.length) {
+        prev = baselineTag = candidates[0].tag;
+        baselineTagObject = candidates[0].object;
+        baselineRevision = candidates[0].revision;
+        baselineKind = "latest_stable_after_initial";
+      }
     }
     range = baselineRevision + ".." + targetRevision;
   } else if (options.baseline) {
@@ -2724,6 +2750,7 @@ committer Captain Preview <captain-preview@invalid> 0 +0000`;
         type_map: typeMap,
         target_revision: targetRevision,
         ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+        ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
         next_version: next2,
         bump_kind: bumpOverride,
         bump_reason: `no commits since last tag; explicit --bump ${bumpOverride}`,
@@ -2743,6 +2770,7 @@ committer Captain Preview <captain-preview@invalid> 0 +0000`;
       type_map: typeMap,
       target_revision: targetRevision,
       ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+      ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
       next_version: prev,
       bump_kind: "none",
       bump_reason: "no commits since last tag",
@@ -2787,6 +2815,7 @@ committer Captain Preview <captain-preview@invalid> 0 +0000`;
     type_map: typeMap,
     target_revision: targetRevision,
     ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+    ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
     next_version: next,
     bump_kind: kind,
     bump_reason: reason,
@@ -2816,6 +2845,8 @@ function parseCliOptions(argv) {
       }
       out.prereleaseId = next;
       i++;
+    } else if (a === "--advance-baseline") {
+      out.advanceBaseline = true;
     } else if (["--baseline", "--target", "--baseline-ref", "--baseline-version", "--baseline-surface", "--baseline-pointer"].includes(a)) {
       const next = argv[++i];
       if (!next || next.startsWith("--")) throw new Error(a + " requires a value");
@@ -3209,6 +3240,8 @@ function parseCliOptions2(argv) {
       }
       out.prereleaseId = next;
       i++;
+    } else if (a === "--advance-baseline") {
+      out.advanceBaseline = true;
     } else if (["--baseline", "--target", "--compatibility-base", "--baseline-ref", "--baseline-version", "--baseline-surface", "--baseline-pointer", "--candidate-ref", "--candidate-head", "--candidate-version-surface", "--candidate-changelog", "--candidate-pointer", "--preview-wrapper"].includes(a)) {
       const next = argv[++i];
       if (!next || next.startsWith("--")) throw new Error(a + " requires a value");
@@ -3218,6 +3251,10 @@ function parseCliOptions2(argv) {
       const path = argv[++i];
       if (!path || path.startsWith("--")) throw new Error("--type-map requires a JSON file");
       out.typeMap = JSON.parse(readFileSync2(path, "utf8"));
+    } else if (a === "--api-mode") {
+      const next = argv[++i];
+      if (!["roslyn", "not_applicable"].includes(next)) throw new Error("--api-mode requires roslyn or not_applicable");
+      out.apiMode = next;
     } else if (a === "--api-posture") {
       const next = argv[++i];
       if (!["source", "binary"].includes(next)) throw new Error("--api-posture requires source or binary");
@@ -3237,7 +3274,9 @@ function parseCliOptions2(argv) {
 }
 var cli = parseCliOptions2(process.argv.slice(2));
 var manifest = computeBump(cli);
-var apiDiff = await tryApiDiff(manifest.baseline_revision || manifest.previous_version, cli.target ? manifest.target_revision : "WORKTREE");
+var skipApi = cli.apiMode === "not_applicable";
+var skippedApiReason = "C# API analysis was not run: caller declared not_applicable; trusted host policy must authenticate this scope.";
+var apiDiff = skipApi ? null : await tryApiDiff(manifest.baseline_revision || manifest.previous_version, cli.target ? manifest.target_revision : "WORKTREE");
 manifest.api_diff = apiDiff;
 var compatibilityDiff = null;
 var compatibilityBase = null;
@@ -3249,7 +3288,7 @@ if (cli.compatibilityBase) {
   } catch {
     throw new Error("compatibility base is not an ancestor of target");
   }
-  compatibilityDiff = await tryApiDiff(compatibilityBase, manifest.target_revision);
+  compatibilityDiff = skipApi ? null : await tryApiDiff(compatibilityBase, manifest.target_revision);
 }
 function sourceFingerprints(base, target, diff) {
   if (!diff || !base || !target || !cli.target) return null;
@@ -3264,9 +3303,10 @@ function sourceFingerprints(base, target, diff) {
 var apiEvidence = classifyApiEvidence(manifest.bump_kind, apiDiff, cli.apiPosture || "binary");
 manifest.api_analysis = {
   status: apiEvidence.status,
+  ...skipApi ? { mode: "not_applicable" } : {},
   posture: cli.apiPosture || "binary",
   bump_kind: apiEvidence.apiKind ?? null,
-  reason: apiEvidence.reason ?? null,
+  reason: skipApi ? skippedApiReason : apiEvidence.reason ?? null,
   requires_stable_baseline: apiEvidence.requiresBaseline ?? false,
   source_fingerprints: sourceFingerprints(manifest.baseline_revision, manifest.target_revision, apiDiff)
 };
@@ -3277,7 +3317,7 @@ if (manifest.bump_kind === "graduate" && (apiEvidence.status !== "analyzed" || a
 if (cli.compatibilityBase) {
   const featureEvidence = classifyApiEvidence(apiEvidence.bumpKind, compatibilityDiff, cli.apiPosture || "binary");
   manifest.compatibility_diff = compatibilityDiff;
-  manifest.compatibility_analysis = { status: featureEvidence.status, posture: cli.apiPosture || "binary", bump_kind: featureEvidence.apiKind ?? null, base_revision: compatibilityBase, target_revision: manifest.target_revision, reason: featureEvidence.reason ?? null, source_fingerprints: sourceFingerprints(compatibilityBase, manifest.target_revision, compatibilityDiff) };
+  manifest.compatibility_analysis = { status: featureEvidence.status, ...skipApi ? { mode: "not_applicable" } : {}, posture: cli.apiPosture || "binary", bump_kind: featureEvidence.apiKind ?? null, base_revision: compatibilityBase, target_revision: manifest.target_revision, reason: skipApi ? skippedApiReason : featureEvidence.reason ?? null, source_fingerprints: sourceFingerprints(compatibilityBase, manifest.target_revision, compatibilityDiff) };
   apiEvidence.bumpKind = featureEvidence.bumpKind;
 }
 if (apiEvidence.bumpKind !== manifest.bump_kind) {

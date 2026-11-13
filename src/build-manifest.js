@@ -29,6 +29,8 @@ function parseCliOptions(argv) {
       }
       out.prereleaseId = next;
       i++;
+    } else if (a === '--advance-baseline') {
+      out.advanceBaseline = true;
     } else if (['--baseline', '--target', '--compatibility-base', '--baseline-ref', '--baseline-version', '--baseline-surface', '--baseline-pointer', '--candidate-ref', '--candidate-head', '--candidate-version-surface', '--candidate-changelog', '--candidate-pointer', '--preview-wrapper'].includes(a)) {
       const next = argv[++i];
       if (!next || next.startsWith('--')) throw new Error(a + ' requires a value');
@@ -38,6 +40,10 @@ function parseCliOptions(argv) {
       const path = argv[++i];
       if (!path || path.startsWith('--')) throw new Error('--type-map requires a JSON file');
       out.typeMap = JSON.parse(readFileSync(path, 'utf8'));
+    } else if (a === '--api-mode') {
+      const next = argv[++i];
+      if (!['roslyn', 'not_applicable'].includes(next)) throw new Error('--api-mode requires roslyn or not_applicable');
+      out.apiMode = next;
     } else if (a === '--api-posture') {
       const next = argv[++i];
       if (!['source', 'binary'].includes(next)) throw new Error('--api-posture requires source or binary');
@@ -60,7 +66,9 @@ let manifest = computeBump(cli);
 
 // Exact revision requests compare committed trees. Legacy calls compare the
 // previous tag against the release-in-flight working tree.
-const apiDiff = await tryApiDiff(manifest.baseline_revision || manifest.previous_version, cli.target ? manifest.target_revision : 'WORKTREE');
+const skipApi = cli.apiMode === 'not_applicable';
+const skippedApiReason = 'C# API analysis was not run: caller declared not_applicable; trusted host policy must authenticate this scope.';
+const apiDiff = skipApi ? null : await tryApiDiff(manifest.baseline_revision || manifest.previous_version, cli.target ? manifest.target_revision : 'WORKTREE');
 manifest.api_diff = apiDiff;
 let compatibilityDiff = null;
 let compatibilityBase = null;
@@ -68,7 +76,7 @@ if (cli.compatibilityBase) {
   if (!cli.target || cli.compatibilityBase.startsWith('-')) throw new Error('--compatibility-base requires a pinned target');
   compatibilityBase = execFileSync('git', ['rev-parse', '--verify', cli.compatibilityBase + '^{commit}'], { encoding: 'utf8' }).trim();
   try { execFileSync('git', ['merge-base', '--is-ancestor', compatibilityBase, manifest.target_revision], { stdio: 'ignore' }); } catch { throw new Error('compatibility base is not an ancestor of target'); }
-  compatibilityDiff = await tryApiDiff(compatibilityBase, manifest.target_revision);
+  compatibilityDiff = skipApi ? null : await tryApiDiff(compatibilityBase, manifest.target_revision);
 }
 
 // Preserve absence of analysis explicitly; an unavailable analyzer is not an
@@ -81,9 +89,10 @@ function sourceFingerprints(base, target, diff) {
 const apiEvidence = classifyApiEvidence(manifest.bump_kind, apiDiff, cli.apiPosture || 'binary');
 manifest.api_analysis = {
   status: apiEvidence.status,
+  ...(skipApi ? {mode:'not_applicable'} : {}),
   posture: cli.apiPosture || 'binary',
   bump_kind: apiEvidence.apiKind ?? null,
-  reason: apiEvidence.reason ?? null,
+  reason: skipApi ? skippedApiReason : apiEvidence.reason ?? null,
   requires_stable_baseline: apiEvidence.requiresBaseline ?? false,
   source_fingerprints: sourceFingerprints(manifest.baseline_revision, manifest.target_revision, apiDiff),
 };
@@ -94,7 +103,7 @@ if (manifest.bump_kind === 'graduate' && (apiEvidence.status !== 'analyzed' || a
 if (cli.compatibilityBase) {
   const featureEvidence = classifyApiEvidence(apiEvidence.bumpKind, compatibilityDiff, cli.apiPosture || 'binary');
   manifest.compatibility_diff = compatibilityDiff;
-  manifest.compatibility_analysis = { status: featureEvidence.status, posture: cli.apiPosture || 'binary', bump_kind: featureEvidence.apiKind ?? null, base_revision: compatibilityBase, target_revision: manifest.target_revision, reason: featureEvidence.reason ?? null, source_fingerprints: sourceFingerprints(compatibilityBase, manifest.target_revision, compatibilityDiff) };
+  manifest.compatibility_analysis = { status: featureEvidence.status, ...(skipApi ? {mode:'not_applicable'} : {}), posture: cli.apiPosture || 'binary', bump_kind: featureEvidence.apiKind ?? null, base_revision: compatibilityBase, target_revision: manifest.target_revision, reason: skipApi ? skippedApiReason : featureEvidence.reason ?? null, source_fingerprints: sourceFingerprints(compatibilityBase, manifest.target_revision, compatibilityDiff) };
   apiEvidence.bumpKind = featureEvidence.bumpKind;
 }
 if (apiEvidence.bumpKind !== manifest.bump_kind) {

@@ -2613,12 +2613,15 @@ function computeBump(options = {}) {
   if (bumpOverride && !["major", "minor", "patch"].includes(bumpOverride)) {
     throw new Error(`bumpOverride must be one of major|minor|patch (got "${bumpOverride}")`);
   }
+  if (options.advanceBaseline !== void 0 && typeof options.advanceBaseline !== "boolean") throw new Error("advanceBaseline must be boolean");
+  if (options.advanceBaseline && !options.baselineRef) throw new Error("advancing requires an explicit initial baseline");
   const explicitBaseline = Boolean(options.baseline || options.baselineRef);
   if (Boolean(explicitBaseline) !== Boolean(options.target) || options.baseline && options.baselineRef) throw new Error("one baseline and target must be supplied together");
   if (!options.baselineRef && (options.baselineVersion || options.baselineSurface || options.baselinePointer)) throw new Error("initial baseline version and surface require baselineRef");
   let prev = lastTag();
   let baselineRevision = null;
   let baselineKind = null;
+  let initialBaseline = null, baselineTag = null, baselineTagObject = null;
   let targetRevision = git("rev-parse", "--verify", "HEAD^{commit}");
   let range;
   if (options.baselineRef) {
@@ -2642,6 +2645,29 @@ function computeBump(options = {}) {
       git("merge-base", "--is-ancestor", baselineRevision, targetRevision);
     } catch {
       throw new Error("baseline is not an ancestor of target");
+    }
+    if (options.advanceBaseline) {
+      initialBaseline = { revision: baselineRevision, version: options.baselineVersion, surface: options.baselineSurface, ...options.baselinePointer !== void 0 ? { pointer: options.baselinePointer } : {} };
+      const candidates = git("tag", "--merged", targetRevision, "--list").split(/\r?\n/).flatMap((tag) => {
+        if (!import_semver.default.valid(tag) || import_semver.default.prerelease(tag) || !import_semver.default.gt(tag, options.baselineVersion)) return [];
+        const object = git("rev-parse", "--verify", "refs/tags/" + tag);
+        if (git("cat-file", "-t", object) !== "tag") return [];
+        const revision = git("rev-parse", "--verify", object + "^{commit}");
+        try {
+          git("merge-base", "--is-ancestor", initialBaseline.revision, revision);
+          git("merge-base", "--is-ancestor", revision, targetRevision);
+        } catch {
+          return [];
+        }
+        return [{ tag, object, revision }];
+      }).sort((a, b) => import_semver.default.rcompare(a.tag, b.tag));
+      if (candidates.length > 1 && import_semver.default.compare(candidates[0].tag, candidates[1].tag) === 0) throw new Error("ambiguous latest stable SemVer tags after initial baseline");
+      if (candidates.length) {
+        prev = baselineTag = candidates[0].tag;
+        baselineTagObject = candidates[0].object;
+        baselineRevision = candidates[0].revision;
+        baselineKind = "latest_stable_after_initial";
+      }
     }
     range = baselineRevision + ".." + targetRevision;
   } else if (options.baseline) {
@@ -2720,6 +2746,7 @@ committer Captain Preview <captain-preview@invalid> 0 +0000`;
         type_map: typeMap,
         target_revision: targetRevision,
         ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+        ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
         next_version: next2,
         bump_kind: bumpOverride,
         bump_reason: `no commits since last tag; explicit --bump ${bumpOverride}`,
@@ -2739,6 +2766,7 @@ committer Captain Preview <captain-preview@invalid> 0 +0000`;
       type_map: typeMap,
       target_revision: targetRevision,
       ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+      ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
       next_version: prev,
       bump_kind: "none",
       bump_reason: "no commits since last tag",
@@ -2783,6 +2811,7 @@ committer Captain Preview <captain-preview@invalid> 0 +0000`;
     type_map: typeMap,
     target_revision: targetRevision,
     ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+    ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
     next_version: next,
     bump_kind: kind,
     bump_reason: reason,
@@ -2812,6 +2841,8 @@ function parseCliOptions(argv) {
       }
       out.prereleaseId = next;
       i++;
+    } else if (a === "--advance-baseline") {
+      out.advanceBaseline = true;
     } else if (["--baseline", "--target", "--baseline-ref", "--baseline-version", "--baseline-surface", "--baseline-pointer"].includes(a)) {
       const next = argv[++i];
       if (!next || next.startsWith("--")) throw new Error(a + " requires a value");

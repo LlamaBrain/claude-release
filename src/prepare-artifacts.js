@@ -107,9 +107,15 @@ export function prepareArtifacts({ manifest, surfaces, changelog }, {verifyNotAp
     if (normalize(existing) !== normalize(section)) throw new Error('existing release version conflicts with this revision');
     output[changelog.path] = changelog.content;
   } else {
-    const match = /^(# [^\r\n]+\r?\n)/.exec(changelog.content);
+    const match = /^((?:# [^\r\n]+|[@\\]page[ \t]+[A-Za-z_][A-Za-z0-9_.:-]*[ \t]+[^\r\n\t ][^\r\n]*)\r?\n)/.exec(changelog.content);
     if (!match) throw new Error('changelog must start with a title');
-    output[changelog.path] = match[1] + '\n' + section + '\n' + changelog.content.slice(match[1].length).replace(/^\s*/, '');
+    // Existing milestone history can contain Doxygen directives and legacy
+    // Unreleased sections. Insert the new release without normalizing that tail.
+    const tail = changelog.content.slice(match[1].length);
+    const firstSection = /^## /m.exec(tail);
+    const insertion = firstSection ? match[1].length + firstSection.index : changelog.content.length;
+    const preamble = changelog.content.slice(0, insertion);
+    output[changelog.path] = preamble + (preamble.endsWith('\n') ? '' : '\n') + '\n' + section + '\n' + changelog.content.slice(insertion);
   }
   return { ...output };
 }
