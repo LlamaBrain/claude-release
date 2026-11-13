@@ -2987,7 +2987,8 @@ function ensureBuilt(projectDir, dllPath) {
   execFileSync2(
     "dotnet",
     ["build", projectDir, "-c", "Release", "--verbosity", "quiet", "--nologo"],
-    { stdio: ["ignore", "inherit", "inherit"] }
+    // Keep build diagnostics on stderr so callers retain a JSON-only stdout protocol.
+    { stdio: ["ignore", 2, 2], windowsHide: true }
   );
 }
 async function tryApiDiff(previousRef, toRef) {

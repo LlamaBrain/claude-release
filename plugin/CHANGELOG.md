@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Keep cold Roslyn analyzer build diagnostics off the manifest stdout JSON protocol.
+
 - Preserve Doxygen page titles, introductory prose and existing milestone changelog sections when adding release entries, including legacy duplicate Unreleased sections.
 - Allow an explicit initial baseline to advance to subsequent reachable annotated stable release tags with `--advance-baseline`, retaining the declared baseline and selected tag object provenance.
 - Honor an explicitly not-applicable C# contract with `--api-mode not_applicable` while retaining unavailable evidence, Conventional Commit impact and the authenticated artifact-preparation gate.
