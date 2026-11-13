@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Keep the forged executable-mode regression fixture clean on Linux as well as Windows.
+
 ### Fixed
 
 - Preserve Doxygen page titles, introductory prose and existing milestone changelog sections when adding release entries, including legacy duplicate Unreleased sections.

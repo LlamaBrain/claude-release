@@ -1,6 +1,6 @@
 ﻿import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, rmSync, chmodSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { prepareArtifacts } from '../src/prepare-artifacts.js';
@@ -31,6 +31,8 @@ try {
   git('checkout','main');
   git('checkout','-qb','forged-mode',target);
   writeFileSync(join(repo,'VERSION'),outputs.VERSION);writeFileSync(join(repo,'CHANGELOG.md'),outputs['CHANGELOG.md']);
+  // Keep the Linux working-tree mode aligned with the deliberately forged index mode.
+  if (process.platform !== 'win32') chmodSync(join(repo,'VERSION'),0o755);
   git('add','VERSION','CHANGELOG.md');git('update-index','--chmod=+x','VERSION');git('commit','-qm','chore: forge release mode');const modeRevision=git('rev-parse','HEAD');
   assert.throws(()=>finalizeRelease({repo,manifest,releaseRevision:modeRevision,verifiedRevision:modeRevision,branchRef:'refs/heads/forged-mode',surfaces:[{path:'VERSION',kind:'text'}],changelogPath:'CHANGELOG.md'}),/artifacts/);
   git('checkout','main');
