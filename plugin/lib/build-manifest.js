@@ -2413,12 +2413,13 @@ var require_conventional_commits_parser = __commonJS({
 });
 
 // src/build-manifest.js
-import { execFileSync as execFileSync3 } from "node:child_process";
+import { execFileSync as execFileSync4 } from "node:child_process";
+import { readFileSync as readFileSync2 } from "node:fs";
 
 // src/compute-bump.js
 var import_semver = __toESM(require_semver2(), 1);
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 
 // src/parse-commits.js
 var import_conventional_commits_parser = __toESM(require_conventional_commits_parser(), 1);
@@ -2435,19 +2436,22 @@ var VALID_TYPES = /* @__PURE__ */ new Set([
   "chore",
   "revert"
 ]);
-function parseCommit(raw) {
-  const parsed = (0, import_conventional_commits_parser.sync)(raw, {
-    headerPattern: /^(\w+)(?:\(([^)]+)\))?(!)?: (.+)$/,
+function parseCommit(raw, { additionalTypes = [], strictPolicy = false } = {}) {
+  if (strictPolicy && (typeof raw !== "string" || Buffer.byteLength(raw, "utf8") > 1048576 || Buffer.byteLength(raw.split(/\r?\n/, 1)[0], "utf8") > 4096)) throw new Error("Captain commit message size limit exceeded");
+  const semanticText = raw.replace(/^Captain-(?:Changes|Release|Provenance):[^\r\n]*$/gim, "");
+  const parsed = (0, import_conventional_commits_parser.sync)(semanticText, {
+    headerPattern: /^([a-z][a-z0-9-]*)(?:\(([^)]+)\))?(!)?: (.+)$/,
     headerCorrespondence: ["type", "scope", "breakingMark", "subject"],
     noteKeywords: ["BREAKING CHANGE", "BREAKING-CHANGE"],
     revertPattern: /^Revert\s"([^"]+)"\s*This reverts commit (\w+)\.?/i,
     revertCorrespondence: ["header", "hash"]
   });
   const type = parsed.type;
-  const valid = Boolean(type && VALID_TYPES.has(type) && parsed.subject);
   const breaking = Boolean(
     parsed.breakingMark === "!" || (parsed.notes || []).some((n) => /^BREAKING[\s-]CHANGE$/.test(n.title))
   );
+  const breakingDescription = (parsed.notes || []).filter((n) => /^BREAKING[\s-]CHANGE$/.test(n.title)).map((n) => n.text).join("\n") || null;
+  const valid = Boolean(type && (VALID_TYPES.has(type) || additionalTypes.includes(type)) && parsed.subject && (!strictPolicy || parsed.subject.trim() && (!parsed.scope || /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(parsed.scope)) && (!breaking || breakingDescription?.trim())));
   const issues = (parsed.references || []).map((r) => `#${r.issue}`);
   return {
     valid,
@@ -2456,7 +2460,7 @@ function parseCommit(raw) {
     subject: parsed.subject || null,
     body: parsed.body || "",
     breaking,
-    breaking_description: (parsed.notes || []).filter((n) => /^BREAKING[\s-]CHANGE$/.test(n.title)).map((n) => n.text).join("\n") || null,
+    breaking_description: breakingDescription,
     issues,
     revert: Boolean(parsed.revert),
     raw
@@ -2485,9 +2489,70 @@ if (isMain && process.argv.includes("--stdin")) {
   process.exit(2);
 }
 
+// src/squash-changes.js
+function expandSquashCommit(commit, options = {}) {
+  const lines = (commit.raw || "").split(/\r?\n/).filter((line) => /^Captain-Changes:/i.test(line));
+  if (!lines.length) return [commit];
+  if (lines.length !== 1) throw new Error("duplicate Captain-Changes trailers");
+  const match = /^Captain-Changes: ([A-Za-z0-9_-]+)$/.exec(lines[0]);
+  if (!match) throw new Error("malformed Captain-Changes trailer");
+  if (match[1].length > 2097152) throw new Error("Captain-Changes encoded size limit exceeded");
+  let payload;
+  try {
+    const bytes = Buffer.from(match[1], "base64url");
+    if (bytes.length > 1048576) throw new RangeError("Captain-Changes decoded size limit exceeded");
+    if (bytes.toString("base64url") !== match[1]) throw new Error("noncanonical encoding");
+    payload = JSON.parse(bytes.toString("utf8"));
+  } catch (error) {
+    if (error instanceof RangeError) throw error;
+    throw new Error("malformed Captain-Changes payload");
+  }
+  if (!payload || payload.schema_version !== 1 || !Array.isArray(payload.commits) || !payload.commits.length) {
+    throw new Error("invalid Captain-Changes schema");
+  }
+  if (payload.commits.length > 512) throw new Error("Captain-Changes entry count limit exceeded");
+  let messageBytes = 0;
+  const seen = /* @__PURE__ */ new Set();
+  const expanded = payload.commits.map((change) => {
+    if (!change || typeof change.oid !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(change.oid) || seen.has(change.oid) || typeof change.message !== "string" || !change.message.trim()) {
+      throw new Error("invalid or duplicate Captain-Changes entry");
+    }
+    if (Buffer.byteLength(change.message.split(/\r?\n/, 1)[0], "utf8") > 4096) throw new Error("Captain-Changes commit header size limit exceeded");
+    messageBytes += Buffer.byteLength(change.message, "utf8");
+    if (messageBytes > 1048576) throw new Error("Captain-Changes aggregate message size limit exceeded");
+    if (/^Captain-Changes:/im.test(change.message)) throw new Error("nested Captain-Changes payload must be flattened");
+    seen.add(change.oid);
+    const parsed = parseCommit(change.message, { ...options, strictPolicy: true });
+    if (!parsed.valid || parsed.breaking && !parsed.breaking_description) throw new Error("invalid Conventional Commit in Captain-Changes");
+    return { hash: change.oid.slice(0, 7), full_hash: change.oid, squash_hash: commit.full_hash, squash_message: commit.raw, ...parsed };
+  });
+  const summary = parseCommit(commit.raw, { ...options, strictPolicy: true });
+  if (!summary.valid || summary.breaking && !summary.breaking_description) throw new Error("invalid squash Conventional Commit");
+  expanded.unshift({ hash: commit.full_hash.slice(0, 7), full_hash: commit.full_hash, squash_summary: true, ...summary });
+  return expanded;
+}
+
+// src/json-pointer.js
+function resolveJsonPointer(doc, pointer) {
+  if (typeof pointer !== "string" || !pointer.startsWith("/")) throw new Error("invalid JSON pointer");
+  const parts = pointer.slice(1).split("/").map((part) => {
+    if (/~(?![01])/.test(part)) throw new Error("invalid JSON pointer");
+    return part.replace(/~1/g, "/").replace(/~0/g, "~");
+  });
+  if (parts.some((part) => ["__proto__", "prototype", "constructor"].includes(part))) throw new Error("unsafe JSON pointer");
+  let parent = doc;
+  for (const part of parts.slice(0, -1)) {
+    if (!parent || typeof parent !== "object" || !Object.hasOwn(parent, part)) throw new Error("missing JSON pointer");
+    parent = parent[part];
+  }
+  const key = parts.at(-1);
+  if (!parent || typeof parent !== "object" || !Object.hasOwn(parent, key)) throw new Error("missing JSON pointer");
+  return { parent, key };
+}
+
 // src/compute-bump.js
 function git(...args) {
-  return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  return execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 }).trim();
 }
 function lastTag() {
   try {
@@ -2498,25 +2563,28 @@ function lastTag() {
 }
 var HSEP = "<<<H>>>";
 var CSEP = "<<<COMMIT-SEP>>>";
-function commitsInRange(range) {
-  let out;
-  try {
-    out = git("log", range, `--pretty=format:%H${HSEP}%B${CSEP}`);
-  } catch {
-    return [];
-  }
+var PSEP = "<<<PARENTS>>>";
+function commitsInRange(range, additionalTypes = [], strictPolicy = false) {
+  const out = git("log", range, `--pretty=format:%H${HSEP}%P${PSEP}%B${CSEP}`);
   if (!out) return [];
   return out.split(CSEP).map((c) => c.trim()).filter(Boolean).map((chunk) => {
     const idx = chunk.indexOf(HSEP);
     const fullHash = chunk.slice(0, idx);
-    const message = chunk.slice(idx + HSEP.length).trim();
-    const parsed = parseCommit(message);
+    const parentEnd = chunk.indexOf(PSEP, idx + HSEP.length);
+    if (idx < 0 || parentEnd < 0) throw new Error("malformed Git history record");
+    const parents = chunk.slice(idx + HSEP.length, parentEnd).trim().split(/\s+/).filter(Boolean);
+    const message = chunk.slice(parentEnd + PSEP.length).trim();
+    if (parents.length > 1 && /^Merge (?:branch|remote-tracking branch|tag) /.test(message.split(/\r?\n/, 1)[0])) {
+      const tree = git("rev-parse", fullHash + "^{tree}");
+      if (parents.some((parent) => git("rev-parse", parent + "^{tree}") === tree)) return null;
+    }
+    const parsed = parseCommit(message, { additionalTypes, strictPolicy });
     return {
       hash: fullHash.slice(0, 7),
       full_hash: fullHash,
       ...parsed
     };
-  });
+  }).filter(Boolean).flatMap((commit) => expandSquashCommit(commit, { additionalTypes, strictPolicy }));
 }
 function applyBump(prev, kind, prereleaseId) {
   const base = prev ? prev.replace(/^v/, "") : "0.0.0";
@@ -2541,12 +2609,135 @@ function applyBump(prev, kind, prereleaseId) {
 function computeBump(options = {}) {
   const prereleaseId = options.prereleaseId || null;
   const bumpOverride = options.bumpOverride || null;
+  const defaults = { feat: "minor", fix: "patch", perf: "patch", docs: "none", style: "none", refactor: "none", test: "none", chore: "none", ci: "none", build: "none", revert: "none" };
+  const custom = options.typeMap || {};
+  if (typeof custom !== "object" || Array.isArray(custom)) throw new Error("typeMap must be an object");
+  for (const [type, impact] of Object.entries(custom)) if (!/^[a-z][a-z0-9-]*$/.test(type) || !["none", "patch", "minor"].includes(impact)) throw new Error("invalid typeMap entry");
+  const typeMap = Object.assign(/* @__PURE__ */ Object.create(null), defaults, custom);
   if (bumpOverride && !["major", "minor", "patch"].includes(bumpOverride)) {
     throw new Error(`bumpOverride must be one of major|minor|patch (got "${bumpOverride}")`);
   }
-  const prev = lastTag();
-  const range = prev ? `${prev}..HEAD` : "HEAD";
-  const commits = commitsInRange(range);
+  if (options.advanceBaseline !== void 0 && typeof options.advanceBaseline !== "boolean") throw new Error("advanceBaseline must be boolean");
+  if (options.advanceBaseline && !options.baselineRef) throw new Error("advancing requires an explicit initial baseline");
+  const explicitBaseline = Boolean(options.baseline || options.baselineRef);
+  if (Boolean(explicitBaseline) !== Boolean(options.target) || options.baseline && options.baselineRef) throw new Error("one baseline and target must be supplied together");
+  if (!options.baselineRef && (options.baselineVersion || options.baselineSurface || options.baselinePointer)) throw new Error("initial baseline version and surface require baselineRef");
+  let prev = lastTag();
+  let baselineRevision = null;
+  let baselineKind = null;
+  let initialBaseline = null, baselineTag = null, baselineTagObject = null;
+  let targetRevision = git("rev-parse", "--verify", "HEAD^{commit}");
+  let range;
+  if (options.baselineRef) {
+    if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(options.baselineRef) || typeof options.baselineVersion !== "string" || !/^v?\d+\.\d+\.\d+$/.test(options.baselineVersion) || !import_semver.default.valid(options.baselineVersion)) throw new Error("initial baseline requires an exact OID and stable version");
+    if (typeof options.baselineSurface !== "string" || !/^[A-Za-z0-9._/-]+$/.test(options.baselineSurface) || options.baselineSurface.startsWith("/") || options.baselineSurface.split("/").some((part) => !part || part === "." || part === "..")) throw new Error("invalid initial baseline surface");
+    if (typeof options.target !== "string" || options.target.startsWith("-")) throw new Error("invalid target revision");
+    baselineRevision = git("rev-parse", "--verify", options.baselineRef + "^{commit}");
+    const surface = git("show", baselineRevision + ":" + options.baselineSurface);
+    let surfaceVersion = surface;
+    if (options.baselinePointer) {
+      const { parent, key } = resolveJsonPointer(JSON.parse(surface), options.baselinePointer);
+      if (typeof parent[key] !== "string") throw new Error("initial baseline JSON version must be a string");
+      surfaceVersion = parent[key];
+    }
+    surfaceVersion = surfaceVersion.replace(/^v/, "");
+    if (surfaceVersion !== options.baselineVersion.replace(/^v/, "")) throw new Error("initial baseline version does not match the committed surface");
+    prev = options.baselineVersion;
+    baselineKind = "declared_initial";
+    targetRevision = git("rev-parse", "--verify", options.target + "^{commit}");
+    try {
+      git("merge-base", "--is-ancestor", baselineRevision, targetRevision);
+    } catch {
+      throw new Error("baseline is not an ancestor of target");
+    }
+    if (options.advanceBaseline) {
+      initialBaseline = { revision: baselineRevision, version: options.baselineVersion, surface: options.baselineSurface, ...options.baselinePointer !== void 0 ? { pointer: options.baselinePointer } : {} };
+      const candidates = git("tag", "--merged", targetRevision, "--list").split(/\r?\n/).flatMap((tag) => {
+        if (!import_semver.default.valid(tag) || import_semver.default.prerelease(tag) || !import_semver.default.gt(tag, options.baselineVersion)) return [];
+        const object = git("rev-parse", "--verify", "refs/tags/" + tag);
+        if (git("cat-file", "-t", object) !== "tag") return [];
+        const revision = git("rev-parse", "--verify", object + "^{commit}");
+        try {
+          git("merge-base", "--is-ancestor", initialBaseline.revision, revision);
+          git("merge-base", "--is-ancestor", revision, targetRevision);
+        } catch {
+          return [];
+        }
+        return [{ tag, object, revision }];
+      }).sort((a, b) => import_semver.default.rcompare(a.tag, b.tag));
+      if (candidates.length > 1 && import_semver.default.compare(candidates[0].tag, candidates[1].tag) === 0) throw new Error("ambiguous latest stable SemVer tags after initial baseline");
+      if (candidates.length) {
+        prev = baselineTag = candidates[0].tag;
+        baselineTagObject = candidates[0].object;
+        baselineRevision = candidates[0].revision;
+        baselineKind = "latest_stable_after_initial";
+      }
+    }
+    range = baselineRevision + ".." + targetRevision;
+  } else if (options.baseline) {
+    if (typeof options.target !== "string" || options.target.startsWith("-")) throw new Error("invalid target revision");
+    targetRevision = git("rev-parse", "--verify", options.target + "^{commit}");
+    if (options.baseline === "latest-stable") {
+      const tags = git("tag", "--merged", targetRevision, "--list").split(/\r?\n/).filter((tag) => import_semver.default.valid(tag) && !import_semver.default.prerelease(tag));
+      if (!tags.length) throw new Error("no reachable stable SemVer tag; configure an explicit initial baseline");
+      tags.sort((a, b) => import_semver.default.rcompare(a, b));
+      if (tags.length > 1 && import_semver.default.compare(tags[0], tags[1]) === 0) throw new Error("ambiguous latest stable SemVer tags");
+      prev = tags[0];
+      baselineKind = "latest_stable";
+    } else {
+      if (typeof options.baseline !== "string" || !import_semver.default.valid(options.baseline) || import_semver.default.prerelease(options.baseline)) throw new Error("baseline must be a stable SemVer tag");
+      prev = options.baseline;
+      baselineKind = "stable_tag";
+    }
+    baselineRevision = git("rev-parse", "--verify", "refs/tags/" + prev + "^{commit}");
+    try {
+      git("merge-base", "--is-ancestor", baselineRevision, targetRevision);
+    } catch {
+      throw new Error("baseline is not an ancestor of target");
+    }
+    range = baselineRevision + ".." + targetRevision;
+  } else {
+    if (prev) baselineRevision = git("rev-parse", "--verify", prev + "^{commit}");
+    range = prev ? prev + "..HEAD" : "HEAD";
+  }
+  let commits = commitsInRange(range, Object.keys(typeMap), explicitBaseline);
+  if (options.previewWrapper !== void 0) {
+    const wrapper = options.previewWrapper;
+    if (!explicitBaseline || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(wrapper || "") || wrapper !== targetRevision || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(options.compatibilityBase || "")) throw new Error("preview wrapper requires exact target and compatibility base");
+    const object = git("cat-file", "-p", wrapper);
+    const header = object.split("\n\n", 1)[0];
+    const expected = `tree ${git("rev-parse", wrapper + "^{tree}")}
+parent ${options.compatibilityBase}
+author Captain Preview <captain-preview@invalid> 0 +0000
+committer Captain Preview <captain-preview@invalid> 0 +0000`;
+    if (header !== expected || !object.startsWith(header + "\n\nchore(landing): refresh approved feature\n\n")) throw new Error("preview wrapper is not the deterministic Captain object");
+    const lines = object.slice((header + "\n\nchore(landing): refresh approved feature\n\n").length).split("\n");
+    if (lines.some((line) => !/^(?:(?:Implements|Completes|Needs-QA|Captain-Run):[ \t]+\S(?:[^\r\n]*\S)?|Captain-Changes: [A-Za-z0-9_-]+)$/.test(line))) throw new Error("preview wrapper contains unexpected semantic content");
+    const wrappers = commits.filter((commit) => commit.full_hash === wrapper && commit.squash_summary);
+    if (wrappers.length !== 1 || !commits.some((commit) => commit.squash_hash === wrapper)) throw new Error("preview wrapper lacks validated semantic children");
+    commits = commits.filter((commit) => !(commit.full_hash === wrapper && commit.squash_summary));
+  }
+  if (explicitBaseline && baselineRevision) {
+    const released = /* @__PURE__ */ new Map();
+    const normalize = (value) => (value || "").replace(/\r\n/g, "\n").split("\n").filter((line) => !/^Captain-Changes:/i.test(line)).join("\n").trim();
+    for (const entry of commitsInRange(baselineRevision, Object.keys(typeMap), false)) {
+      const message = normalize(entry.raw), existing = released.get(entry.full_hash);
+      if (existing !== void 0 && existing !== message) throw new Error("conflicting released semantic commit " + entry.full_hash);
+      released.set(entry.full_hash, message);
+    }
+    commits = commits.filter((entry) => {
+      const existing = released.get(entry.full_hash);
+      if (existing === void 0) return true;
+      if (existing !== normalize(entry.raw)) throw new Error("semantic commit conflicts with released baseline " + entry.full_hash);
+      return false;
+    });
+  }
+  const seenSource = /* @__PURE__ */ new Set();
+  for (const commit of commits) {
+    if (explicitBaseline && (!commit.valid || commit.breaking && !commit.breaking_description)) throw new Error("invalid Conventional Commit " + commit.full_hash);
+    if (seenSource.has(commit.full_hash)) throw new Error("duplicate semantic commit " + commit.full_hash);
+    seenSource.add(commit.full_hash);
+  }
   const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const prevIsPrerelease = prev ? (import_semver.default.prerelease(prev.replace(/^v/, "")) || []).length > 0 : false;
   if (commits.length === 0) {
@@ -2554,6 +2745,12 @@ function computeBump(options = {}) {
       const next2 = applyBump(prev, bumpOverride, prereleaseId);
       return {
         previous_version: prev,
+        baseline_revision: baselineRevision,
+        baseline_kind: baselineKind,
+        type_map: typeMap,
+        target_revision: targetRevision,
+        ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+        ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
         next_version: next2,
         bump_kind: bumpOverride,
         bump_reason: `no commits since last tag; explicit --bump ${bumpOverride}`,
@@ -2568,6 +2765,12 @@ function computeBump(options = {}) {
     }
     return {
       previous_version: prev,
+      baseline_revision: baselineRevision,
+      baseline_kind: baselineKind,
+      type_map: typeMap,
+      target_revision: targetRevision,
+      ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+      ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
       next_version: prev,
       bump_kind: "none",
       bump_reason: "no commits since last tag",
@@ -2587,30 +2790,32 @@ function computeBump(options = {}) {
   );
   const filtered = commits.filter((c) => !c.revert && !revertTargets.has(c.hash));
   const breaking = filtered.filter((c) => c.breaking);
-  const feats = filtered.filter((c) => c.type === "feat" && !c.breaking);
-  let kind, reason;
-  if (bumpOverride) {
-    kind = bumpOverride;
-    reason = `explicit --bump ${bumpOverride}`;
-  } else if (breaking.length > 0) {
-    kind = "major";
-    reason = `${breaking.length} breaking change${breaking.length > 1 ? "s" : ""}`;
-  } else if (feats.length > 0) {
-    kind = "minor";
-    reason = `${feats.length} feat commit${feats.length > 1 ? "s" : ""}, no breaking changes`;
-  } else {
-    kind = "patch";
-    reason = `${filtered.length} non-breaking, non-feat commit${filtered.length > 1 ? "s" : ""}`;
+  const ranks = { none: 0, patch: 1, minor: 2, major: 3 };
+  let kind = breaking.length ? "major" : "none";
+  let reason = breaking.length ? `${breaking.length} breaking change(s)` : "non-breaking commit type mapping";
+  for (const commit of filtered) {
+    const impact = typeMap[commit.type] || "none";
+    if (ranks[impact] > ranks[kind]) kind = impact;
   }
-  const next = applyBump(prev, kind, prereleaseId);
+  if (bumpOverride && ranks[bumpOverride] > ranks[kind]) {
+    kind = bumpOverride;
+    reason += `; raised by explicit --bump ${bumpOverride}`;
+  }
+  const next = kind === "none" ? prev : applyBump(prev, kind, prereleaseId);
   if (prereleaseId) {
     reason = `${reason}; pre-release id "${prereleaseId}"${prevIsPrerelease ? " (incremented)" : " (entered)"}`;
-  } else if (prevIsPrerelease) {
+  } else if (prevIsPrerelease && kind !== "none") {
     reason = `${reason}; graduating ${prev} \u2192 stable (commit signal "${kind}" is informational only)`;
     kind = "graduate";
   }
   return {
     previous_version: prev,
+    baseline_revision: baselineRevision,
+    baseline_kind: baselineKind,
+    type_map: typeMap,
+    target_revision: targetRevision,
+    ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
+    ...initialBaseline ? { initial_baseline: initialBaseline, baseline_tag: baselineTag, baseline_tag_object: baselineTagObject } : {},
     next_version: next,
     bump_kind: kind,
     bump_reason: reason,
@@ -2623,7 +2828,8 @@ function computeBump(options = {}) {
       description: c.breaking_description
     })),
     prerelease_id: prereleaseId,
-    previous_is_prerelease: prevIsPrerelease
+    previous_is_prerelease: prevIsPrerelease,
+    ...bumpOverride ? { bump_override: bumpOverride } : {}
   };
 }
 function parseCliOptions(argv) {
@@ -2639,6 +2845,17 @@ function parseCliOptions(argv) {
       }
       out.prereleaseId = next;
       i++;
+    } else if (a === "--advance-baseline") {
+      out.advanceBaseline = true;
+    } else if (["--baseline", "--target", "--baseline-ref", "--baseline-version", "--baseline-surface", "--baseline-pointer"].includes(a)) {
+      const next = argv[++i];
+      if (!next || next.startsWith("--")) throw new Error(a + " requires a value");
+      const keys = { "--baseline": "baseline", "--target": "target", "--baseline-ref": "baselineRef", "--baseline-version": "baselineVersion", "--baseline-surface": "baselineSurface", "--baseline-pointer": "baselinePointer" };
+      out[keys[a]] = next;
+    } else if (a === "--type-map") {
+      const path = argv[++i];
+      if (!path || path.startsWith("--")) throw new Error("--type-map requires a JSON file");
+      out.typeMap = JSON.parse(readFileSync(path, "utf8"));
     } else if (a === "--bump") {
       const next = argv[i + 1];
       if (!next || !["major", "minor", "patch"].includes(next)) {
@@ -2672,6 +2889,7 @@ import { existsSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync as writ
 import { fileURLToPath } from "node:url";
 import { dirname, resolve, join } from "node:path";
 import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
 var WORKTREE_REF = "WORKTREE";
 function warn(reason) {
   process.stderr.write(`[claude-release] api-diff skipped: ${reason}
@@ -2713,14 +2931,28 @@ function isIncludedCsPath(relPath) {
   void name;
   return true;
 }
-function materializeGitRef(ref, destDir) {
-  let listing;
-  try {
-    listing = runGit(["ls-tree", "-r", "--name-only", "-z", ref]);
-  } catch (err) {
-    throw new Error(`git ls-tree failed for ref ${ref}: ${err.message}`);
+function selectedGitCsPaths(ref) {
+  const listing = runGit(["ls-tree", "-r", "--name-only", "-z", ref]);
+  return listing.split("\0").filter(Boolean).map((p) => p.replace(/\\/g, "/")).filter(isIncludedCsPath);
+}
+function fingerprintGitSources(ref) {
+  const hash = createHash("sha256");
+  hash.update("captain-roslyn-selected-sources-v1\0");
+  for (const path of selectedGitCsPaths(ref).sort()) {
+    const pathBytes = Buffer.from(path, "utf8");
+    const bytes = runGit(["show", `${ref}:${path}`], { encoding: "buffer" });
+    const length = Buffer.alloc(8);
+    length.writeBigUInt64BE(BigInt(pathBytes.length));
+    hash.update(length);
+    hash.update(pathBytes);
+    length.writeBigUInt64BE(BigInt(bytes.length));
+    hash.update(length);
+    hash.update(bytes);
   }
-  const files = listing.split("\0").filter(Boolean).map((p) => p.replace(/\\/g, "/")).filter(isIncludedCsPath);
+  return hash.digest("hex");
+}
+function materializeGitRef(ref, destDir) {
+  const files = selectedGitCsPaths(ref);
   for (const relPath of files) {
     const outPath = join(destDir, ...relPath.split("/"));
     mkdirSync(dirname(outPath), { recursive: true });
@@ -2755,7 +2987,8 @@ function ensureBuilt(projectDir, dllPath) {
   execFileSync2(
     "dotnet",
     ["build", projectDir, "-c", "Release", "--verbosity", "quiet", "--nologo"],
-    { stdio: ["ignore", "inherit", "inherit"] }
+    // Keep build diagnostics on stderr so callers retain a JSON-only stdout protocol.
+    { stdio: ["ignore", 2, 2], windowsHide: true }
   );
 }
 async function tryApiDiff(previousRef, toRef) {
@@ -2897,10 +3130,99 @@ function classifyRemovedAddedPairs(apiDiff2) {
   return { realRemoved, effectiveAdded, additivePairs };
 }
 
+// src/release-classification.js
+function optionalExtension(pair) {
+  const signature = pair.addedEntry.signature || "";
+  const open = signature.indexOf("("), close = signature.lastIndexOf(")");
+  if (open < 0 || close <= open) return false;
+  const added = splitParamTuple(signature.slice(open + 1, close));
+  const removedFqn = pair.removedEntry.fqn || "";
+  const ropen = removedFqn.indexOf("("), rclose = removedFqn.lastIndexOf(")");
+  if (ropen < 0 || rclose <= ropen) return false;
+  const removed = splitParamTuple(removedFqn.slice(ropen + 1, rclose));
+  const appended = added.slice(removed.length);
+  return appended.length > 0 && appended.every((p) => /^[^=]+\s=\s.+$/.test(p));
+}
+function classifyApiEvidence(commitKind, apiDiff2, posture = "binary") {
+  if (!["source", "binary"].includes(posture)) throw new Error("invalid API compatibility posture");
+  if (!apiDiff2) return { bumpKind: commitKind, status: "unavailable", reason: "API analysis unavailable" };
+  const pairs = classifyRemovedAddedPairs(apiDiff2);
+  const additivePairs = posture === "source" ? pairs.additivePairs.filter(optionalExtension) : [];
+  const accepted = new Set(additivePairs.map((pair) => pair.removedEntry));
+  const realRemoved = apiDiff2.removed.filter((entry) => !accepted.has(entry));
+  const effectiveAdded = pairs.effectiveAdded;
+  const apiKind = realRemoved.length || apiDiff2.changed.length ? "major" : effectiveAdded.length ? "minor" : "none";
+  const ranks = { none: 0, patch: 1, minor: 2, major: 3 };
+  if (commitKind === "graduate") {
+    return { bumpKind: commitKind, status: "analyzed", apiKind, requiresBaseline: apiKind !== "none" };
+  }
+  if (!(commitKind in ranks)) throw new Error(`Unsupported bump kind: ${commitKind}`);
+  return {
+    bumpKind: ranks[apiKind] > ranks[commitKind] ? apiKind : commitKind,
+    status: "analyzed",
+    apiKind,
+    reason: `API diff: ${realRemoved.length} removal(s), ${apiDiff2.changed.length} change(s), ${effectiveAdded.length} addition(s); ${additivePairs.length} additive pair(s)`
+  };
+}
+
+// src/candidate-state.js
+var import_semver2 = __toESM(require_semver2(), 1);
+import { execFileSync as execFileSync3 } from "node:child_process";
+var fullOid = (value) => typeof value === "string" && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(value);
+var safePath = (value) => typeof value === "string" && /^[A-Za-z0-9._/-]+$/.test(value) && !value.startsWith("/") && !value.split("/").some((part) => !part || part === "." || part === "..");
+var git2 = (...args) => execFileSync3("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+function applyCandidateState(manifest2, { branchRef, expectedHead, versionPath, changelogPath, pointer } = {}) {
+  if (!manifest2 || !fullOid(manifest2.baseline_revision) || !fullOid(manifest2.target_revision) || !manifest2.prerelease_id || !import_semver2.default.valid(manifest2.next_version) || !import_semver2.default.valid(manifest2.previous_version) || import_semver2.default.prerelease(manifest2.previous_version)) throw new Error("candidate requires exact stable baseline, target and prerelease version");
+  if (typeof branchRef !== "string" || !branchRef.startsWith("refs/heads/") || !fullOid(expectedHead) || !safePath(versionPath) || !safePath(changelogPath)) throw new Error("candidate requires a branch ref, exact head and configured surfaces");
+  try {
+    git2("check-ref-format", branchRef);
+  } catch {
+    throw new Error("invalid staging branch ref");
+  }
+  if (git2("rev-parse", "--verify", branchRef + "^{commit}") !== expectedHead) throw new Error("staging branch changed from pinned candidate head");
+  if (manifest2.bump_kind === "none") return { ...manifest2, candidate_state: { branch_ref: branchRef, base_revision: expectedHead, version_path: versionPath, changelog_path: changelogPath, ...pointer !== void 0 ? { pointer } : {}, previous_version: null, previous_target: null, previous_baseline: null, action: "none" } };
+  if (!import_semver2.default.prerelease(manifest2.next_version)) throw new Error("candidate requires prerelease version");
+  const versionContent = git2("show", expectedHead + ":" + versionPath);
+  let current = versionContent;
+  if (pointer !== void 0) {
+    const { parent, key } = resolveJsonPointer(JSON.parse(versionContent), pointer);
+    current = parent[key];
+  }
+  if (typeof current !== "string" || !import_semver2.default.valid(current.trim())) throw new Error("staging version surface is invalid");
+  current = current.trim();
+  const previous = import_semver2.default.parse(current), proposed = import_semver2.default.parse(manifest2.next_version), stable = import_semver2.default.parse(manifest2.previous_version);
+  const previousCore = `${previous.major}.${previous.minor}.${previous.patch}`, proposedCore = `${proposed.major}.${proposed.minor}.${proposed.patch}`, stableCore = `${stable.major}.${stable.minor}.${stable.patch}`;
+  if (import_semver2.default.lt(previousCore, stableCore) || import_semver2.default.gt(previousCore, proposedCore)) throw new Error("staging version is stale or exceeds proposed candidate");
+  let priorTarget = null, priorBaseline = null, next = manifest2.next_version, action = "first";
+  if (previous.prerelease.length) {
+    const changelog = git2("show", expectedHead + ":" + changelogPath);
+    const normalized = previous.version, escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const sections = changelog.split(/(?=^## \[)/m).filter((part) => new RegExp("^## \\[v?" + escape(normalized) + "\\](?:[ \\t]|$)", "m").test(part));
+    if (sections.length !== 1) throw new Error("staging candidate changelog entry is missing or ambiguous");
+    const markers = [...sections[0].matchAll(/<!-- captain-release baseline:([0-9a-f]{40}(?:[0-9a-f]{24})?) target:([0-9a-f]{40}(?:[0-9a-f]{24})?) -->/g)];
+    if (markers.length !== 1) throw new Error("staging candidate provenance is missing or ambiguous");
+    priorBaseline = markers[0][1];
+    priorTarget = markers[0][2];
+    if (previousCore === proposedCore) {
+      if (priorBaseline !== manifest2.baseline_revision || previous.prerelease[0] !== manifest2.prerelease_id) throw new Error("staging candidate baseline or identifier conflicts");
+      if (priorTarget === manifest2.target_revision) {
+        next = "v" + previous.version;
+        action = "reuse";
+      } else {
+        const incremented = import_semver2.default.inc(previous.version, "prerelease", manifest2.prerelease_id);
+        if (!incremented) throw new Error("cannot increment candidate version");
+        next = "v" + incremented;
+        action = "increment";
+      }
+    } else action = "new_series";
+  } else if (previousCore !== stableCore) throw new Error("staging stable version does not match release baseline");
+  return { ...manifest2, next_version: next, candidate_state: { branch_ref: branchRef, base_revision: expectedHead, version_path: versionPath, changelog_path: changelogPath, ...pointer !== void 0 ? { pointer } : {}, previous_version: current, previous_target: priorTarget, previous_baseline: priorBaseline, action } };
+}
+
 // src/build-manifest.js
 function hasStagedWork() {
   try {
-    execFileSync3("git", ["diff", "--cached", "--quiet"], { stdio: "ignore" });
+    execFileSync4("git", ["diff", "--cached", "--quiet"], { stdio: "ignore" });
     return false;
   } catch {
     return true;
@@ -2919,6 +3241,25 @@ function parseCliOptions2(argv) {
       }
       out.prereleaseId = next;
       i++;
+    } else if (a === "--advance-baseline") {
+      out.advanceBaseline = true;
+    } else if (["--baseline", "--target", "--compatibility-base", "--baseline-ref", "--baseline-version", "--baseline-surface", "--baseline-pointer", "--candidate-ref", "--candidate-head", "--candidate-version-surface", "--candidate-changelog", "--candidate-pointer", "--preview-wrapper"].includes(a)) {
+      const next = argv[++i];
+      if (!next || next.startsWith("--")) throw new Error(a + " requires a value");
+      const keys = { "--baseline": "baseline", "--target": "target", "--compatibility-base": "compatibilityBase", "--baseline-ref": "baselineRef", "--baseline-version": "baselineVersion", "--baseline-surface": "baselineSurface", "--baseline-pointer": "baselinePointer", "--candidate-ref": "candidateRef", "--candidate-head": "candidateHead", "--candidate-version-surface": "candidateVersionSurface", "--candidate-changelog": "candidateChangelog", "--candidate-pointer": "candidatePointer", "--preview-wrapper": "previewWrapper" };
+      out[keys[a]] = next;
+    } else if (a === "--type-map") {
+      const path = argv[++i];
+      if (!path || path.startsWith("--")) throw new Error("--type-map requires a JSON file");
+      out.typeMap = JSON.parse(readFileSync2(path, "utf8"));
+    } else if (a === "--api-mode") {
+      const next = argv[++i];
+      if (!["roslyn", "not_applicable"].includes(next)) throw new Error("--api-mode requires roslyn or not_applicable");
+      out.apiMode = next;
+    } else if (a === "--api-posture") {
+      const next = argv[++i];
+      if (!["source", "binary"].includes(next)) throw new Error("--api-posture requires source or binary");
+      out.apiPosture = next;
     } else if (a === "--bump") {
       const next = argv[i + 1];
       if (!next || !["major", "minor", "patch"].includes(next)) {
@@ -2934,39 +3275,68 @@ function parseCliOptions2(argv) {
 }
 var cli = parseCliOptions2(process.argv.slice(2));
 var manifest = computeBump(cli);
-var apiDiff = await tryApiDiff(manifest.previous_version, "WORKTREE");
-if (apiDiff) manifest.api_diff = apiDiff;
-if (manifest.bump_kind === "none" && apiDiff && (apiDiff.added.length > 0 || apiDiff.removed.length > 0 || apiDiff.changed.length > 0)) {
-  const { realRemoved, effectiveAdded, additivePairs } = classifyRemovedAddedPairs(apiDiff);
-  let promoted;
-  let why;
-  if (realRemoved.length > 0 || apiDiff.changed.length > 0) {
-    promoted = "major";
-    const pairNote = additivePairs.length > 0 ? ` (excluding ${additivePairs.length} additive-param pair(s))` : "";
-    why = `api-diff has ${realRemoved.length} removal(s)${pairNote} and ${apiDiff.changed.length} change(s) \u2014 likely breaking`;
-  } else if (effectiveAdded.length > 0) {
-    promoted = "minor";
-    const pairNote = additivePairs.length > 0 ? `, ${additivePairs.length} of which extend(s) an existing signature with default-valued param(s)` : "";
-    why = `api-diff has ${effectiveAdded.length} addition(s)${pairNote}, no real removals/changes \u2014 backwards-compatible feature`;
-  } else {
-    promoted = "minor";
-    why = `api-diff produced only additive-param pair(s) (${additivePairs.length}) \u2014 backwards-compatible`;
+var skipApi = cli.apiMode === "not_applicable";
+var skippedApiReason = "C# API analysis was not run: caller declared not_applicable; trusted host policy must authenticate this scope.";
+var apiDiff = skipApi ? null : await tryApiDiff(manifest.baseline_revision || manifest.previous_version, cli.target ? manifest.target_revision : "WORKTREE");
+manifest.api_diff = apiDiff;
+var compatibilityDiff = null;
+var compatibilityBase = null;
+if (cli.compatibilityBase) {
+  if (!cli.target || cli.compatibilityBase.startsWith("-")) throw new Error("--compatibility-base requires a pinned target");
+  compatibilityBase = execFileSync4("git", ["rev-parse", "--verify", cli.compatibilityBase + "^{commit}"], { encoding: "utf8" }).trim();
+  try {
+    execFileSync4("git", ["merge-base", "--is-ancestor", compatibilityBase, manifest.target_revision], { stdio: "ignore" });
+  } catch {
+    throw new Error("compatibility base is not an ancestor of target");
   }
-  manifest.bump_kind = promoted;
-  manifest.next_version = applyBump(manifest.previous_version, promoted, cli.prereleaseId || null);
-  manifest.bump_reason = `${manifest.bump_reason}; + staged API changes detected by api-diff (${why})`;
+  compatibilityDiff = skipApi ? null : await tryApiDiff(compatibilityBase, manifest.target_revision);
+}
+function sourceFingerprints(base, target, diff) {
+  if (!diff || !base || !target || !cli.target) return null;
+  try {
+    return { algorithm: "sha256", base: fingerprintGitSources(base), target: fingerprintGitSources(target) };
+  } catch (error) {
+    process.stderr.write(`[claude-release] source fingerprint unavailable: ${error.message}
+`);
+    return null;
+  }
+}
+var apiEvidence = classifyApiEvidence(manifest.bump_kind, apiDiff, cli.apiPosture || "binary");
+manifest.api_analysis = {
+  status: apiEvidence.status,
+  ...skipApi ? { mode: "not_applicable" } : {},
+  posture: cli.apiPosture || "binary",
+  bump_kind: apiEvidence.apiKind ?? null,
+  reason: skipApi ? skippedApiReason : apiEvidence.reason ?? null,
+  requires_stable_baseline: apiEvidence.requiresBaseline ?? false,
+  source_fingerprints: sourceFingerprints(manifest.baseline_revision, manifest.target_revision, apiDiff)
+};
+if (manifest.bump_kind === "graduate" && (apiEvidence.status !== "analyzed" || apiEvidence.requiresBaseline)) {
+  process.stderr.write("error: prerelease graduation requires an explicit stable baseline and resolved API compatibility evidence\n");
+  process.exit(2);
+}
+if (cli.compatibilityBase) {
+  const featureEvidence = classifyApiEvidence(apiEvidence.bumpKind, compatibilityDiff, cli.apiPosture || "binary");
+  manifest.compatibility_diff = compatibilityDiff;
+  manifest.compatibility_analysis = { status: featureEvidence.status, ...skipApi ? { mode: "not_applicable" } : {}, posture: cli.apiPosture || "binary", bump_kind: featureEvidence.apiKind ?? null, base_revision: compatibilityBase, target_revision: manifest.target_revision, reason: skipApi ? skippedApiReason : featureEvidence.reason ?? null, source_fingerprints: sourceFingerprints(compatibilityBase, manifest.target_revision, compatibilityDiff) };
+  apiEvidence.bumpKind = featureEvidence.bumpKind;
+}
+if (apiEvidence.bumpKind !== manifest.bump_kind) {
+  manifest.bump_kind = apiEvidence.bumpKind;
+  manifest.next_version = applyBump(manifest.previous_version, apiEvidence.bumpKind, cli.prereleaseId || null);
+  manifest.bump_reason = `${manifest.bump_reason}; ${apiEvidence.reason}`;
+}
+if (!cli.target && manifest.bump_kind === "none" && hasStagedWork()) {
+  manifest.bump_kind = "patch";
+  manifest.next_version = applyBump(manifest.previous_version, "patch", cli.prereleaseId || null);
+  manifest.bump_reason = `${manifest.bump_reason}; staged work present without an API classification; assuming patch`;
   if (cli.prereleaseId) {
     manifest.bump_reason = `${manifest.bump_reason}; pre-release id "${cli.prereleaseId}"`;
     manifest.prerelease_id = cli.prereleaseId;
   }
 }
-if (manifest.bump_kind === "none" && hasStagedWork()) {
-  manifest.bump_kind = "patch";
-  manifest.next_version = applyBump(manifest.previous_version, "patch", cli.prereleaseId || null);
-  manifest.bump_reason = `${manifest.bump_reason}; + staged work present but api-diff is empty \u2014 non-API change (patch)`;
-  if (cli.prereleaseId) {
-    manifest.bump_reason = `${manifest.bump_reason}; pre-release id "${cli.prereleaseId}"`;
-    manifest.prerelease_id = cli.prereleaseId;
-  }
+if ([cli.candidateRef, cli.candidateHead, cli.candidateVersionSurface, cli.candidateChangelog, cli.candidatePointer].some((value) => value !== void 0)) {
+  if (!cli.target || !cli.prereleaseId || !cli.candidateRef || !cli.candidateHead || !cli.candidateVersionSurface || !cli.candidateChangelog) throw new Error("candidate state requires target, prerelease identifier, ref, head, version surface and changelog");
+  manifest = applyCandidateState(manifest, { branchRef: cli.candidateRef, expectedHead: cli.candidateHead, versionPath: cli.candidateVersionSurface, changelogPath: cli.candidateChangelog, ...cli.candidatePointer !== void 0 ? { pointer: cli.candidatePointer } : {} });
 }
 console.log(JSON.stringify(manifest, null, 2));

@@ -1,0 +1,46 @@
+﻿import assert from 'node:assert/strict';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { adjudicateRelease } from '../src/adjudicate-release.js';
+import { adjudicateRelease as bundledAdjudicateRelease } from '../plugin/lib/finalize-release.js';
+const baseline='a'.repeat(40), base='b'.repeat(40), head='c'.repeat(40), key=Buffer.alloc(32,3);
+const manifest={previous_version:'v1.0.0',next_version:'v2.0.0',bump_kind:'major',bump_reason:'API and commit break',baseline_revision:baseline,target_revision:head,prerelease_id:null,type_map:{feat:'minor',fix:'patch',docs:'none'},commits:[{full_hash:'d'.repeat(40),hash:'ddddddd',type:'fix',subject:'remove API',breaking:true,breaking_description:'Use the replacement.'}],breaking_changes:[{hash:'ddddddd',description:'Use the replacement.'}],api_analysis:{status:'analyzed',bump_kind:'major',posture:'binary'},api_diff:{added:[],removed:[{fqn:'Example.Run()',signature:'public void Run()'}],changed:[]},compatibility_analysis:{status:'analyzed',bump_kind:'major',base_revision:base,target_revision:head,posture:'binary'},compatibility_diff:{added:[],removed:[{fqn:'Example.Run()',signature:'public void Run()'}],changed:[]}};
+function digest(m){return createHash('sha256').update(JSON.stringify({baseline_revision:m.baseline_revision,target_revision:m.target_revision,bump_kind:m.bump_kind,commits:m.commits,api_analysis:m.api_analysis,api_diff:m.api_diff,compatibility_analysis:m.compatibility_analysis,compatibility_diff:m.compatibility_diff,previous_version:m.previous_version,next_version:m.next_version,prerelease_id:m.prerelease_id,type_map:m.type_map,bump_override:m.bump_override??null})).digest('hex');}
+function issue(m,choice,justification='Compatibility verified.',not_applicable) {const r={base:m.compatibility_analysis.base_revision,head:m.target_revision,finding_sha256:digest(m),choice,actor:'Michael',justification,scope:'all_findings',...(not_applicable ? {not_applicable} : {})};return {...r,signature:createHmac('sha256',key).update(JSON.stringify(r)).digest('hex')};}
+function verifyDecision(m, ref) { const {signature,...r}=ref; const expected=createHmac('sha256',key).update(JSON.stringify(r)).digest(); const actual=Buffer.from(signature,'hex'); if(actual.length!==expected.length||!timingSafeEqual(actual,expected)||r.finding_sha256!==digest(m)) return null; return r; }
+const rejected=adjudicateRelease(manifest,issue(manifest,'reject-major'),{verifyDecision});
+assert.deepEqual(bundledAdjudicateRelease(manifest,issue(manifest,'reject-major'),{verifyDecision}),rejected);
+assert.equal(rejected.status,'ready'); assert.equal(rejected.manifest.bump_kind,'patch'); assert.equal(rejected.manifest.next_version,'v1.0.1');
+assert.equal(rejected.manifest.observed_classification.bump_kind,'major'); assert.equal(rejected.manifest.adjudication.justification,'Compatibility verified.');
+assert.equal(manifest.bump_kind,'major');
+const minor={...manifest,commits:[{...manifest.commits[0],type:'feat'}]};
+assert.equal(adjudicateRelease(minor,issue(minor,'reject-major'),{verifyDecision}).manifest.next_version,'v1.1.0');
+const confirmed=adjudicateRelease(manifest,issue(manifest,'confirm-major'),{verifyDecision});
+assert.equal(confirmed.manifest.bump_kind,'major'); assert.equal(confirmed.manifest.next_version,'v2.0.0');
+assert.equal(adjudicateRelease(manifest,issue(manifest,'revise'),{verifyDecision}).status,'needs_revision');
+assert.throws(()=>adjudicateRelease({...manifest,target_revision:'e'.repeat(40)},issue(manifest,'reject-major'),{verifyDecision}));
+assert.throws(()=>adjudicateRelease({...manifest,compatibility_diff:{...manifest.compatibility_diff,changed:[{fqn:'Other'}]}},issue(manifest,'reject-major'),{verifyDecision}));
+assert.throws(()=>adjudicateRelease(manifest,issue(manifest,'reject-major',''),{verifyDecision}));
+assert.throws(()=>adjudicateRelease(manifest,{...issue(manifest,'reject-major'),scope:'one_finding'},{verifyDecision}));
+assert.throws(()=>adjudicateRelease(manifest,issue(manifest,'reject-major'),{}));
+assert.throws(()=>adjudicateRelease({...manifest,type_map:{...manifest.type_map,fix:'minor'}},issue(manifest,'reject-major'),{verifyDecision}));
+assert.throws(()=>adjudicateRelease({...manifest,bump_override:'major'},issue(manifest,'reject-major'),{verifyDecision}));
+const unavailable={...manifest,api_analysis:{status:'unavailable'},api_diff:null,compatibility_analysis:{status:'unavailable',base_revision:base,target_revision:head},compatibility_diff:null};
+assert.throws(()=>adjudicateRelease(unavailable,issue(unavailable,'reject-major'),{verifyDecision}));
+const rationale={api_analysis:'No supported C# contract.',compatibility_analysis:'No supported C# contract.'};
+const nonCs=adjudicateRelease(unavailable,issue(unavailable,'reject-major','Compatibility checked.',rationale),{verifyDecision});
+assert.equal(nonCs.manifest.bump_kind,'patch'); assert.deepEqual(nonCs.manifest.adjudication.not_applicable,rationale);
+const forged={...manifest,api_diff:{added:[],removed:[],changed:[]}};
+assert.throws(()=>adjudicateRelease(forged,issue(forged,'reject-major'),{verifyDecision}),/contradicts/);
+const forced={...manifest,bump_override:'major'};
+assert.equal(adjudicateRelease(forced,issue(forced,'reject-major'),{verifyDecision}).manifest.bump_kind,'major');
+const unsupported={...manifest,commits:[{...manifest.commits[0],breaking:false}],api_analysis:{status:'analyzed',bump_kind:'none',posture:'binary'},api_diff:{added:[],removed:[],changed:[]},compatibility_analysis:{status:'analyzed',bump_kind:'none',base_revision:base,target_revision:head,posture:'binary'},compatibility_diff:{added:[],removed:[],changed:[]}};
+assert.throws(()=>adjudicateRelease(unsupported,issue(unsupported,'reject-major'),{verifyDecision}),/no supported breaking signal/);
+assert.throws(()=>adjudicateRelease(manifest,issue(manifest,'reject-major'),{verifyDecision:(report,ref)=>{report.type_map.fix='minor';return verifyDecision(report,ref);}}));
+const reviewed={reviewed_base:'1'.repeat(40),reviewed_head:'2'.repeat(40),reviewed_finding_sha256:'3'.repeat(64)};
+const associated=adjudicateRelease(manifest,issue(manifest,'reject-major'),{verifyDecision:(m,ref)=>({...verifyDecision(m,ref),...reviewed})});
+assert.deepEqual(bundledAdjudicateRelease(manifest,issue(manifest,'reject-major'),{verifyDecision:(m,ref)=>({...verifyDecision(m,ref),...reviewed})}),associated);
+assert.equal(associated.manifest.adjudication.reviewed_base,reviewed.reviewed_base);
+assert.equal(associated.manifest.adjudication.reviewed_head,reviewed.reviewed_head);
+assert.equal(associated.manifest.adjudication.reviewed_finding_sha256,reviewed.reviewed_finding_sha256);
+assert.throws(()=>adjudicateRelease(manifest,issue(manifest,'reject-major'),{verifyDecision:(m,ref)=>({...verifyDecision(m,ref),reviewed_base:reviewed.reviewed_base})}));
+console.log('authenticated aggregate adjudication passed');

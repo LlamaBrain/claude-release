@@ -1,0 +1,11 @@
+﻿import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+const script = `import {parseCommit} from './src/parse-commits.js';
+const token='a'.repeat(50000);
+const raw='fix: retain semantics\\n\\nBREAKING CHANGE: Replace old API.\\nImplements: project#42\\nCaptain-Changes: '+token+'\\nCaptain-Release: '+token+'\\nCaptain-Provenance: '+token;
+const parsed=parseCommit(raw,{strictPolicy:true});
+if (!parsed.breaking || !parsed.breaking_description.includes('Replace old API') || !parsed.issues.includes('#42') || parsed.raw!==raw) process.exit(3);`;
+const result=spawnSync(process.execPath,['--input-type=module','-e',script],{cwd:process.cwd(),encoding:'utf8',timeout:3000});
+assert.equal(result.error?.code,undefined,`opaque provenance processing timed out: ${result.error}`);
+assert.equal(result.status,0,result.stderr);
+console.log('large opaque provenance parses promptly and retains semantic evidence');

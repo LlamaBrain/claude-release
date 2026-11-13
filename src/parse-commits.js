@@ -9,9 +9,14 @@ const VALID_TYPES = new Set([
   'test', 'build', 'ci', 'chore', 'revert',
 ]);
 
-export function parseCommit(raw) {
-  const parsed = parseSync(raw, {
-    headerPattern: /^(\w+)(?:\(([^)]+)\))?(!)?: (.+)$/,
+export function parseCommit(raw, { additionalTypes = [], strictPolicy = false } = {}) {
+  if (strictPolicy && (typeof raw !== 'string' || Buffer.byteLength(raw, 'utf8') > 1048576 || Buffer.byteLength(raw.split(/\r?\n/,1)[0], 'utf8') > 4096)) throw new Error('Captain commit message size limit exceeded');
+  // Opaque signed/transport trailers can be megabytes long; parsing their base64
+  // as issue-reference prose causes quadratic regex work. Preserve the original
+  // message for transport and provenance while parsing only semantic text.
+  const semanticText = raw.replace(/^Captain-(?:Changes|Release|Provenance):[^\r\n]*$/gim, '');
+  const parsed = parseSync(semanticText, {
+    headerPattern: /^([a-z][a-z0-9-]*)(?:\(([^)]+)\))?(!)?: (.+)$/,
     headerCorrespondence: ['type', 'scope', 'breakingMark', 'subject'],
     noteKeywords: ['BREAKING CHANGE', 'BREAKING-CHANGE'],
     revertPattern: /^Revert\s"([^"]+)"\s*This reverts commit (\w+)\.?/i,
@@ -19,11 +24,12 @@ export function parseCommit(raw) {
   });
 
   const type = parsed.type;
-  const valid = Boolean(type && VALID_TYPES.has(type) && parsed.subject);
   const breaking = Boolean(
     parsed.breakingMark === '!' ||
     (parsed.notes || []).some(n => /^BREAKING[\s-]CHANGE$/.test(n.title))
   );
+  const breakingDescription = (parsed.notes || []).filter(n => /^BREAKING[\s-]CHANGE$/.test(n.title)).map(n => n.text).join('\n') || null;
+  const valid = Boolean(type && (VALID_TYPES.has(type) || additionalTypes.includes(type)) && parsed.subject && (!strictPolicy || (parsed.subject.trim() && (!parsed.scope || /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(parsed.scope)) && (!breaking || breakingDescription?.trim()))));
   const issues = (parsed.references || []).map(r => `#${r.issue}`);
 
   // Squash-merge bodies often embed multiple Conventional Commit lines as a list.
@@ -35,10 +41,7 @@ export function parseCommit(raw) {
     subject: parsed.subject || null,
     body: parsed.body || '',
     breaking,
-    breaking_description: (parsed.notes || [])
-      .filter(n => /^BREAKING[\s-]CHANGE$/.test(n.title))
-      .map(n => n.text)
-      .join('\n') || null,
+    breaking_description: breakingDescription,
     issues,
     revert: Boolean(parsed.revert),
     raw,

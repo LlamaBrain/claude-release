@@ -47,9 +47,10 @@ jobs:
             exit 1
           fi
 
-      - name: Smoke tests
+      - name: Deterministic smoke and regression tests
         run: |
-          node tests/test-smell-smoke.js
-          node tests/test-api-diff-pair-smoke.js
-          node tests/test-release-gates-smoke.js
-          node tests/test-api-diff-smoke.js
+          for test in tests/test-*.js; do
+            # This fixture needs the separately built Captain trusted host.
+            if [ "$test" = "tests/test-production-host-demo.js" ]; then continue; fi
+            node "$test"
+          done

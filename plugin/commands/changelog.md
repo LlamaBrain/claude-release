@@ -5,6 +5,15 @@ allowed-tools: Bash, Read, Edit
 
 # claude-release:changelog
 
+## Branch-driven policy routing
+
+First inspect the Captain policy captured from the trusted base, including any committed `commitPolicyPath`. If `commit.mode` is `branch_driven`, use this section and stop before the legacy steps below.
+
+Feature worktrees do not edit shared changelogs. At an authorized release boundary, use the exact verified release manifest and configured per-milestone destination with `lib/prepare-artifacts.js --request <json>`. The returned changelog content is proposed output; Captain?s promotion workflow applies it through the authorized release PR. Preserve destination squash references and task traceability. If compatibility evidence or the authenticated release flow is unavailable, report the blocker instead of treating it as clean.
+
+## Legacy per-commit workflow
+
+
 One LLM call, gated on hash-existence and structure cross-checks against the manifest.
 
 ## 1. Build the manifest

@@ -5,6 +5,17 @@ allowed-tools: Bash, Read
 
 # claude-release:dry-run
 
+## Branch-driven policy routing
+
+First inspect the Captain policy captured from the trusted base, including any committed `commitPolicyPath`. If `commit.mode` is `branch_driven`, use this section and stop before the legacy steps below.
+
+Preview only the configured release-boundary target. Run `lib/build-manifest.js` with the explicit stable baseline and exact target, plus the configured prerelease identifier and compatibility base when applicable. For an explicitly configured initial baseline use its pinned ref, version, surface and optional JSON pointer. Show the full classification, exact revisions, preserved squash changes, and compatibility status. `api_diff: null` or unavailable analysis is missing evidence, not an empty compatible diff.
+
+For a release candidate or stable boundary, `lib/prepare-artifacts.js --request <json>` can preview deterministic proposed surfaces and the configured milestone changelog without writing them. Report that a suspected MAJOR requires Captain?s authenticated compatibility decision. Do not stage, commit, tag, publish, or push.
+
+## Legacy per-commit workflow
+
+
 Compose the first three steps of `/release` — manifest → section → verify — and print the result. Nothing on disk changes. Use this to iterate on changelog wording before committing to the full release flow.
 
 ## Steps
@@ -15,7 +26,7 @@ Compose the first three steps of `/release` — manifest → section → verify 
    node "${CLAUDE_PLUGIN_ROOT}/lib/build-manifest.js" > /tmp/release-manifest.json
    ```
 
-   If `bump_kind = none` and every `api_diff` array (`added`, `removed`, `changed`) is empty, abort cleanly — there is nothing to preview.
+   If `api_diff` is null, report that analysis was unavailable. If `bump_kind = none` and the analyzed arrays are empty, there is no release to preview.
 
 2. **Generate the section** — identical to `/claude-release:changelog` Step 2. Use the same prompt verbatim; write the model output to `/tmp/release-section.md`.
 
