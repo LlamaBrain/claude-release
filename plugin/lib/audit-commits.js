@@ -34,9 +34,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// ../../../node_modules/conventional-commits-parser/lib/parser.js
+// node_modules/conventional-commits-parser/lib/parser.js
 var require_parser = __commonJS({
-  "../../../node_modules/conventional-commits-parser/lib/parser.js"(exports, module) {
+  "node_modules/conventional-commits-parser/lib/parser.js"(exports, module) {
     "use strict";
     var CATCH_ALL = /()(.+)/gi;
     var SCISSOR = "# ------------------------ >8 ------------------------";
@@ -291,9 +291,9 @@ var require_parser = __commonJS({
   }
 });
 
-// ../../../node_modules/conventional-commits-parser/lib/regex.js
+// node_modules/conventional-commits-parser/lib/regex.js
 var require_regex = __commonJS({
-  "../../../node_modules/conventional-commits-parser/lib/regex.js"(exports, module) {
+  "node_modules/conventional-commits-parser/lib/regex.js"(exports, module) {
     "use strict";
     var reNomatch = /(?!.*)/;
     function join(array, joiner) {
@@ -342,9 +342,9 @@ var require_regex = __commonJS({
   }
 });
 
-// ../../../node_modules/conventional-commits-parser/index.js
+// node_modules/conventional-commits-parser/index.js
 var require_conventional_commits_parser = __commonJS({
-  "../../../node_modules/conventional-commits-parser/index.js"(exports, module) {
+  "node_modules/conventional-commits-parser/index.js"(exports, module) {
     "use strict";
     var { Transform } = __require("stream");
     var parser = require_parser();
