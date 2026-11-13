@@ -34,9 +34,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/conventional-commits-parser/lib/parser.js
+// ../../../node_modules/conventional-commits-parser/lib/parser.js
 var require_parser = __commonJS({
-  "node_modules/conventional-commits-parser/lib/parser.js"(exports, module) {
+  "../../../node_modules/conventional-commits-parser/lib/parser.js"(exports, module) {
     "use strict";
     var CATCH_ALL = /()(.+)/gi;
     var SCISSOR = "# ------------------------ >8 ------------------------";
@@ -291,9 +291,9 @@ var require_parser = __commonJS({
   }
 });
 
-// node_modules/conventional-commits-parser/lib/regex.js
+// ../../../node_modules/conventional-commits-parser/lib/regex.js
 var require_regex = __commonJS({
-  "node_modules/conventional-commits-parser/lib/regex.js"(exports, module) {
+  "../../../node_modules/conventional-commits-parser/lib/regex.js"(exports, module) {
     "use strict";
     var reNomatch = /(?!.*)/;
     function join(array, joiner) {
@@ -342,9 +342,9 @@ var require_regex = __commonJS({
   }
 });
 
-// node_modules/conventional-commits-parser/index.js
+// ../../../node_modules/conventional-commits-parser/index.js
 var require_conventional_commits_parser = __commonJS({
-  "node_modules/conventional-commits-parser/index.js"(exports, module) {
+  "../../../node_modules/conventional-commits-parser/index.js"(exports, module) {
     "use strict";
     var { Transform } = __require("stream");
     var parser = require_parser();
@@ -454,19 +454,22 @@ var VALID_TYPES = /* @__PURE__ */ new Set([
   "chore",
   "revert"
 ]);
-function parseCommit(raw) {
-  const parsed = (0, import_conventional_commits_parser.sync)(raw, {
-    headerPattern: /^(\w+)(?:\(([^)]+)\))?(!)?: (.+)$/,
+function parseCommit(raw, { additionalTypes = [], strictPolicy = false } = {}) {
+  if (strictPolicy && (typeof raw !== "string" || Buffer.byteLength(raw, "utf8") > 1048576 || Buffer.byteLength(raw.split(/\r?\n/, 1)[0], "utf8") > 4096)) throw new Error("Captain commit message size limit exceeded");
+  const semanticText = raw.replace(/^Captain-(?:Changes|Release|Provenance):[^\r\n]*$/gim, "");
+  const parsed = (0, import_conventional_commits_parser.sync)(semanticText, {
+    headerPattern: /^([a-z][a-z0-9-]*)(?:\(([^)]+)\))?(!)?: (.+)$/,
     headerCorrespondence: ["type", "scope", "breakingMark", "subject"],
     noteKeywords: ["BREAKING CHANGE", "BREAKING-CHANGE"],
     revertPattern: /^Revert\s"([^"]+)"\s*This reverts commit (\w+)\.?/i,
     revertCorrespondence: ["header", "hash"]
   });
   const type = parsed.type;
-  const valid = Boolean(type && VALID_TYPES.has(type) && parsed.subject);
   const breaking = Boolean(
     parsed.breakingMark === "!" || (parsed.notes || []).some((n) => /^BREAKING[\s-]CHANGE$/.test(n.title))
   );
+  const breakingDescription = (parsed.notes || []).filter((n) => /^BREAKING[\s-]CHANGE$/.test(n.title)).map((n) => n.text).join("\n") || null;
+  const valid = Boolean(type && (VALID_TYPES.has(type) || additionalTypes.includes(type)) && parsed.subject && (!strictPolicy || parsed.subject.trim() && (!parsed.scope || /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(parsed.scope)) && (!breaking || breakingDescription?.trim())));
   const issues = (parsed.references || []).map((r) => `#${r.issue}`);
   return {
     valid,
@@ -475,7 +478,7 @@ function parseCommit(raw) {
     subject: parsed.subject || null,
     body: parsed.body || "",
     breaking,
-    breaking_description: (parsed.notes || []).filter((n) => /^BREAKING[\s-]CHANGE$/.test(n.title)).map((n) => n.text).join("\n") || null,
+    breaking_description: breakingDescription,
     issues,
     revert: Boolean(parsed.revert),
     raw

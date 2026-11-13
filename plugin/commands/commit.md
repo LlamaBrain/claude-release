@@ -5,6 +5,17 @@ allowed-tools: Bash, Read
 
 # claude-release:commit
 
+## Branch-driven policy routing
+
+First inspect the Captain policy captured from the trusted base, including any committed `commitPolicyPath`. If `commit.mode` is `branch_driven`, use this section and stop before the legacy steps below.
+
+Produce a valid Conventional Commit with the configured type and a meaningful scope. Preserve the governed task trailer (`Implements:`, `Completes:`, or `Needs-QA:`) and any `Captain-Run:` relationship required by Captain. For a breaking change, include a concrete `BREAKING CHANGE:` description; use Captain?s governed `breaking_description` field when creating the commit. Use the captured release-intent and compatibility checks, and honor existing commit and branch permissions.
+
+Do not change shared version surfaces or shared changelogs in feature worktrees. Do not add an approval ceremony for a routine classification. Compatibility decisions belong to Captain?s authenticated human gate.
+
+## Legacy per-commit workflow
+
+
 Produce a Conventional Commit message for the currently staged changes. Two stages: a deterministic context-gathering pass, then an LLM proposal that gets cross-checked against the diff before any commit happens.
 
 ## 1. Gather context

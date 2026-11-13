@@ -34,9 +34,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   mod
 ));
 
-// node_modules/conventional-commits-parser/lib/parser.js
+// ../../../node_modules/conventional-commits-parser/lib/parser.js
 var require_parser = __commonJS({
-  "node_modules/conventional-commits-parser/lib/parser.js"(exports, module) {
+  "../../../node_modules/conventional-commits-parser/lib/parser.js"(exports, module) {
     "use strict";
     var CATCH_ALL = /()(.+)/gi;
     var SCISSOR = "# ------------------------ >8 ------------------------";
@@ -291,9 +291,9 @@ var require_parser = __commonJS({
   }
 });
 
-// node_modules/conventional-commits-parser/lib/regex.js
+// ../../../node_modules/conventional-commits-parser/lib/regex.js
 var require_regex = __commonJS({
-  "node_modules/conventional-commits-parser/lib/regex.js"(exports, module) {
+  "../../../node_modules/conventional-commits-parser/lib/regex.js"(exports, module) {
     "use strict";
     var reNomatch = /(?!.*)/;
     function join2(array, joiner) {
@@ -342,9 +342,9 @@ var require_regex = __commonJS({
   }
 });
 
-// node_modules/conventional-commits-parser/index.js
+// ../../../node_modules/conventional-commits-parser/index.js
 var require_conventional_commits_parser = __commonJS({
-  "node_modules/conventional-commits-parser/index.js"(exports, module) {
+  "../../../node_modules/conventional-commits-parser/index.js"(exports, module) {
     "use strict";
     var { Transform } = __require("stream");
     var parser = require_parser();
@@ -436,9 +436,9 @@ var require_conventional_commits_parser = __commonJS({
   }
 });
 
-// node_modules/semver/internal/constants.js
+// ../../../node_modules/semver/internal/constants.js
 var require_constants = __commonJS({
-  "node_modules/semver/internal/constants.js"(exports, module) {
+  "../../../node_modules/semver/internal/constants.js"(exports, module) {
     "use strict";
     var SEMVER_SPEC_VERSION = "2.0.0";
     var MAX_LENGTH = 256;
@@ -468,9 +468,9 @@ var require_constants = __commonJS({
   }
 });
 
-// node_modules/semver/internal/debug.js
+// ../../../node_modules/semver/internal/debug.js
 var require_debug = __commonJS({
-  "node_modules/semver/internal/debug.js"(exports, module) {
+  "../../../node_modules/semver/internal/debug.js"(exports, module) {
     "use strict";
     var debug = typeof process === "object" && process.env && process.env.NODE_DEBUG && /\bsemver\b/i.test(process.env.NODE_DEBUG) ? (...args) => console.error("SEMVER", ...args) : () => {
     };
@@ -478,9 +478,9 @@ var require_debug = __commonJS({
   }
 });
 
-// node_modules/semver/internal/re.js
+// ../../../node_modules/semver/internal/re.js
 var require_re = __commonJS({
-  "node_modules/semver/internal/re.js"(exports, module) {
+  "../../../node_modules/semver/internal/re.js"(exports, module) {
     "use strict";
     var {
       MAX_SAFE_COMPONENT_LENGTH,
@@ -566,9 +566,9 @@ var require_re = __commonJS({
   }
 });
 
-// node_modules/semver/internal/parse-options.js
+// ../../../node_modules/semver/internal/parse-options.js
 var require_parse_options = __commonJS({
-  "node_modules/semver/internal/parse-options.js"(exports, module) {
+  "../../../node_modules/semver/internal/parse-options.js"(exports, module) {
     "use strict";
     var looseOption = Object.freeze({ loose: true });
     var emptyOpts = Object.freeze({});
@@ -585,9 +585,9 @@ var require_parse_options = __commonJS({
   }
 });
 
-// node_modules/semver/internal/identifiers.js
+// ../../../node_modules/semver/internal/identifiers.js
 var require_identifiers = __commonJS({
-  "node_modules/semver/internal/identifiers.js"(exports, module) {
+  "../../../node_modules/semver/internal/identifiers.js"(exports, module) {
     "use strict";
     var numeric = /^[0-9]+$/;
     var compareIdentifiers = (a, b) => {
@@ -610,9 +610,9 @@ var require_identifiers = __commonJS({
   }
 });
 
-// node_modules/semver/classes/semver.js
+// ../../../node_modules/semver/classes/semver.js
 var require_semver = __commonJS({
-  "node_modules/semver/classes/semver.js"(exports, module) {
+  "../../../node_modules/semver/classes/semver.js"(exports, module) {
     "use strict";
     var debug = require_debug();
     var { MAX_LENGTH, MAX_SAFE_INTEGER } = require_constants();
@@ -889,9 +889,9 @@ var require_semver = __commonJS({
   }
 });
 
-// node_modules/semver/functions/parse.js
+// ../../../node_modules/semver/functions/parse.js
 var require_parse = __commonJS({
-  "node_modules/semver/functions/parse.js"(exports, module) {
+  "../../../node_modules/semver/functions/parse.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = (version, options, throwErrors = false) => {
@@ -911,9 +911,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/semver/functions/valid.js
+// ../../../node_modules/semver/functions/valid.js
 var require_valid = __commonJS({
-  "node_modules/semver/functions/valid.js"(exports, module) {
+  "../../../node_modules/semver/functions/valid.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var valid = (version, options) => {
@@ -924,9 +924,9 @@ var require_valid = __commonJS({
   }
 });
 
-// node_modules/semver/functions/clean.js
+// ../../../node_modules/semver/functions/clean.js
 var require_clean = __commonJS({
-  "node_modules/semver/functions/clean.js"(exports, module) {
+  "../../../node_modules/semver/functions/clean.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var clean = (version, options) => {
@@ -937,9 +937,9 @@ var require_clean = __commonJS({
   }
 });
 
-// node_modules/semver/functions/inc.js
+// ../../../node_modules/semver/functions/inc.js
 var require_inc = __commonJS({
-  "node_modules/semver/functions/inc.js"(exports, module) {
+  "../../../node_modules/semver/functions/inc.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var inc = (version, release, options, identifier, identifierBase) => {
@@ -961,9 +961,9 @@ var require_inc = __commonJS({
   }
 });
 
-// node_modules/semver/functions/diff.js
+// ../../../node_modules/semver/functions/diff.js
 var require_diff = __commonJS({
-  "node_modules/semver/functions/diff.js"(exports, module) {
+  "../../../node_modules/semver/functions/diff.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var diff = (version1, version2) => {
@@ -1005,9 +1005,9 @@ var require_diff = __commonJS({
   }
 });
 
-// node_modules/semver/functions/major.js
+// ../../../node_modules/semver/functions/major.js
 var require_major = __commonJS({
-  "node_modules/semver/functions/major.js"(exports, module) {
+  "../../../node_modules/semver/functions/major.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var major = (a, loose) => new SemVer(a, loose).major;
@@ -1015,9 +1015,9 @@ var require_major = __commonJS({
   }
 });
 
-// node_modules/semver/functions/minor.js
+// ../../../node_modules/semver/functions/minor.js
 var require_minor = __commonJS({
-  "node_modules/semver/functions/minor.js"(exports, module) {
+  "../../../node_modules/semver/functions/minor.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var minor = (a, loose) => new SemVer(a, loose).minor;
@@ -1025,9 +1025,9 @@ var require_minor = __commonJS({
   }
 });
 
-// node_modules/semver/functions/patch.js
+// ../../../node_modules/semver/functions/patch.js
 var require_patch = __commonJS({
-  "node_modules/semver/functions/patch.js"(exports, module) {
+  "../../../node_modules/semver/functions/patch.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var patch = (a, loose) => new SemVer(a, loose).patch;
@@ -1035,9 +1035,9 @@ var require_patch = __commonJS({
   }
 });
 
-// node_modules/semver/functions/prerelease.js
+// ../../../node_modules/semver/functions/prerelease.js
 var require_prerelease = __commonJS({
-  "node_modules/semver/functions/prerelease.js"(exports, module) {
+  "../../../node_modules/semver/functions/prerelease.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var prerelease = (version, options) => {
@@ -1048,9 +1048,9 @@ var require_prerelease = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare.js
+// ../../../node_modules/semver/functions/compare.js
 var require_compare = __commonJS({
-  "node_modules/semver/functions/compare.js"(exports, module) {
+  "../../../node_modules/semver/functions/compare.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compare = (a, b, loose) => new SemVer(a, loose).compare(new SemVer(b, loose));
@@ -1058,9 +1058,9 @@ var require_compare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rcompare.js
+// ../../../node_modules/semver/functions/rcompare.js
 var require_rcompare = __commonJS({
-  "node_modules/semver/functions/rcompare.js"(exports, module) {
+  "../../../node_modules/semver/functions/rcompare.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var rcompare = (a, b, loose) => compare(b, a, loose);
@@ -1068,9 +1068,9 @@ var require_rcompare = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-loose.js
+// ../../../node_modules/semver/functions/compare-loose.js
 var require_compare_loose = __commonJS({
-  "node_modules/semver/functions/compare-loose.js"(exports, module) {
+  "../../../node_modules/semver/functions/compare-loose.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var compareLoose = (a, b) => compare(a, b, true);
@@ -1078,9 +1078,9 @@ var require_compare_loose = __commonJS({
   }
 });
 
-// node_modules/semver/functions/compare-build.js
+// ../../../node_modules/semver/functions/compare-build.js
 var require_compare_build = __commonJS({
-  "node_modules/semver/functions/compare-build.js"(exports, module) {
+  "../../../node_modules/semver/functions/compare-build.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var compareBuild = (a, b, loose) => {
@@ -1092,9 +1092,9 @@ var require_compare_build = __commonJS({
   }
 });
 
-// node_modules/semver/functions/sort.js
+// ../../../node_modules/semver/functions/sort.js
 var require_sort = __commonJS({
-  "node_modules/semver/functions/sort.js"(exports, module) {
+  "../../../node_modules/semver/functions/sort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var sort = (list, loose) => list.sort((a, b) => compareBuild(a, b, loose));
@@ -1102,9 +1102,9 @@ var require_sort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/rsort.js
+// ../../../node_modules/semver/functions/rsort.js
 var require_rsort = __commonJS({
-  "node_modules/semver/functions/rsort.js"(exports, module) {
+  "../../../node_modules/semver/functions/rsort.js"(exports, module) {
     "use strict";
     var compareBuild = require_compare_build();
     var rsort = (list, loose) => list.sort((a, b) => compareBuild(b, a, loose));
@@ -1112,9 +1112,9 @@ var require_rsort = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gt.js
+// ../../../node_modules/semver/functions/gt.js
 var require_gt = __commonJS({
-  "node_modules/semver/functions/gt.js"(exports, module) {
+  "../../../node_modules/semver/functions/gt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gt = (a, b, loose) => compare(a, b, loose) > 0;
@@ -1122,9 +1122,9 @@ var require_gt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lt.js
+// ../../../node_modules/semver/functions/lt.js
 var require_lt = __commonJS({
-  "node_modules/semver/functions/lt.js"(exports, module) {
+  "../../../node_modules/semver/functions/lt.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lt = (a, b, loose) => compare(a, b, loose) < 0;
@@ -1132,9 +1132,9 @@ var require_lt = __commonJS({
   }
 });
 
-// node_modules/semver/functions/eq.js
+// ../../../node_modules/semver/functions/eq.js
 var require_eq = __commonJS({
-  "node_modules/semver/functions/eq.js"(exports, module) {
+  "../../../node_modules/semver/functions/eq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var eq = (a, b, loose) => compare(a, b, loose) === 0;
@@ -1142,9 +1142,9 @@ var require_eq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/neq.js
+// ../../../node_modules/semver/functions/neq.js
 var require_neq = __commonJS({
-  "node_modules/semver/functions/neq.js"(exports, module) {
+  "../../../node_modules/semver/functions/neq.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var neq = (a, b, loose) => compare(a, b, loose) !== 0;
@@ -1152,9 +1152,9 @@ var require_neq = __commonJS({
   }
 });
 
-// node_modules/semver/functions/gte.js
+// ../../../node_modules/semver/functions/gte.js
 var require_gte = __commonJS({
-  "node_modules/semver/functions/gte.js"(exports, module) {
+  "../../../node_modules/semver/functions/gte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var gte = (a, b, loose) => compare(a, b, loose) >= 0;
@@ -1162,9 +1162,9 @@ var require_gte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/lte.js
+// ../../../node_modules/semver/functions/lte.js
 var require_lte = __commonJS({
-  "node_modules/semver/functions/lte.js"(exports, module) {
+  "../../../node_modules/semver/functions/lte.js"(exports, module) {
     "use strict";
     var compare = require_compare();
     var lte = (a, b, loose) => compare(a, b, loose) <= 0;
@@ -1172,9 +1172,9 @@ var require_lte = __commonJS({
   }
 });
 
-// node_modules/semver/functions/cmp.js
+// ../../../node_modules/semver/functions/cmp.js
 var require_cmp = __commonJS({
-  "node_modules/semver/functions/cmp.js"(exports, module) {
+  "../../../node_modules/semver/functions/cmp.js"(exports, module) {
     "use strict";
     var eq = require_eq();
     var neq = require_neq();
@@ -1222,9 +1222,9 @@ var require_cmp = __commonJS({
   }
 });
 
-// node_modules/semver/functions/coerce.js
+// ../../../node_modules/semver/functions/coerce.js
 var require_coerce = __commonJS({
-  "node_modules/semver/functions/coerce.js"(exports, module) {
+  "../../../node_modules/semver/functions/coerce.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var parse = require_parse();
@@ -1268,9 +1268,9 @@ var require_coerce = __commonJS({
   }
 });
 
-// node_modules/semver/functions/truncate.js
+// ../../../node_modules/semver/functions/truncate.js
 var require_truncate = __commonJS({
-  "node_modules/semver/functions/truncate.js"(exports, module) {
+  "../../../node_modules/semver/functions/truncate.js"(exports, module) {
     "use strict";
     var parse = require_parse();
     var constants = require_constants();
@@ -1309,9 +1309,9 @@ var require_truncate = __commonJS({
   }
 });
 
-// node_modules/semver/internal/lrucache.js
+// ../../../node_modules/semver/internal/lrucache.js
 var require_lrucache = __commonJS({
-  "node_modules/semver/internal/lrucache.js"(exports, module) {
+  "../../../node_modules/semver/internal/lrucache.js"(exports, module) {
     "use strict";
     var LRUCache = class {
       constructor() {
@@ -1347,9 +1347,9 @@ var require_lrucache = __commonJS({
   }
 });
 
-// node_modules/semver/classes/range.js
+// ../../../node_modules/semver/classes/range.js
 var require_range = __commonJS({
-  "node_modules/semver/classes/range.js"(exports, module) {
+  "../../../node_modules/semver/classes/range.js"(exports, module) {
     "use strict";
     var SPACE_CHARACTERS = /\s+/g;
     var Range = class _Range {
@@ -1727,9 +1727,9 @@ var require_range = __commonJS({
   }
 });
 
-// node_modules/semver/classes/comparator.js
+// ../../../node_modules/semver/classes/comparator.js
 var require_comparator = __commonJS({
-  "node_modules/semver/classes/comparator.js"(exports, module) {
+  "../../../node_modules/semver/classes/comparator.js"(exports, module) {
     "use strict";
     var ANY = /* @__PURE__ */ Symbol("SemVer ANY");
     var Comparator = class _Comparator {
@@ -1840,9 +1840,9 @@ var require_comparator = __commonJS({
   }
 });
 
-// node_modules/semver/functions/satisfies.js
+// ../../../node_modules/semver/functions/satisfies.js
 var require_satisfies = __commonJS({
-  "node_modules/semver/functions/satisfies.js"(exports, module) {
+  "../../../node_modules/semver/functions/satisfies.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var satisfies = (version, range, options) => {
@@ -1857,9 +1857,9 @@ var require_satisfies = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/to-comparators.js
+// ../../../node_modules/semver/ranges/to-comparators.js
 var require_to_comparators = __commonJS({
-  "node_modules/semver/ranges/to-comparators.js"(exports, module) {
+  "../../../node_modules/semver/ranges/to-comparators.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var toComparators = (range, options) => new Range(range, options).set.map((comp) => comp.map((c) => c.value).join(" ").trim().split(" "));
@@ -1867,9 +1867,9 @@ var require_to_comparators = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/max-satisfying.js
+// ../../../node_modules/semver/ranges/max-satisfying.js
 var require_max_satisfying = __commonJS({
-  "node_modules/semver/ranges/max-satisfying.js"(exports, module) {
+  "../../../node_modules/semver/ranges/max-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1896,9 +1896,9 @@ var require_max_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-satisfying.js
+// ../../../node_modules/semver/ranges/min-satisfying.js
 var require_min_satisfying = __commonJS({
-  "node_modules/semver/ranges/min-satisfying.js"(exports, module) {
+  "../../../node_modules/semver/ranges/min-satisfying.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1925,9 +1925,9 @@ var require_min_satisfying = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/min-version.js
+// ../../../node_modules/semver/ranges/min-version.js
 var require_min_version = __commonJS({
-  "node_modules/semver/ranges/min-version.js"(exports, module) {
+  "../../../node_modules/semver/ranges/min-version.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Range = require_range();
@@ -1984,9 +1984,9 @@ var require_min_version = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/valid.js
+// ../../../node_modules/semver/ranges/valid.js
 var require_valid2 = __commonJS({
-  "node_modules/semver/ranges/valid.js"(exports, module) {
+  "../../../node_modules/semver/ranges/valid.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var validRange = (range, options) => {
@@ -2000,9 +2000,9 @@ var require_valid2 = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/outside.js
+// ../../../node_modules/semver/ranges/outside.js
 var require_outside = __commonJS({
-  "node_modules/semver/ranges/outside.js"(exports, module) {
+  "../../../node_modules/semver/ranges/outside.js"(exports, module) {
     "use strict";
     var SemVer = require_semver();
     var Comparator = require_comparator();
@@ -2069,9 +2069,9 @@ var require_outside = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/gtr.js
+// ../../../node_modules/semver/ranges/gtr.js
 var require_gtr = __commonJS({
-  "node_modules/semver/ranges/gtr.js"(exports, module) {
+  "../../../node_modules/semver/ranges/gtr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var gtr = (version, range, options) => outside(version, range, ">", options);
@@ -2079,9 +2079,9 @@ var require_gtr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/ltr.js
+// ../../../node_modules/semver/ranges/ltr.js
 var require_ltr = __commonJS({
-  "node_modules/semver/ranges/ltr.js"(exports, module) {
+  "../../../node_modules/semver/ranges/ltr.js"(exports, module) {
     "use strict";
     var outside = require_outside();
     var ltr = (version, range, options) => outside(version, range, "<", options);
@@ -2089,9 +2089,9 @@ var require_ltr = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/intersects.js
+// ../../../node_modules/semver/ranges/intersects.js
 var require_intersects = __commonJS({
-  "node_modules/semver/ranges/intersects.js"(exports, module) {
+  "../../../node_modules/semver/ranges/intersects.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var intersects = (r1, r2, options) => {
@@ -2103,9 +2103,9 @@ var require_intersects = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/simplify.js
+// ../../../node_modules/semver/ranges/simplify.js
 var require_simplify = __commonJS({
-  "node_modules/semver/ranges/simplify.js"(exports, module) {
+  "../../../node_modules/semver/ranges/simplify.js"(exports, module) {
     "use strict";
     var satisfies = require_satisfies();
     var compare = require_compare();
@@ -2153,9 +2153,9 @@ var require_simplify = __commonJS({
   }
 });
 
-// node_modules/semver/ranges/subset.js
+// ../../../node_modules/semver/ranges/subset.js
 var require_subset = __commonJS({
-  "node_modules/semver/ranges/subset.js"(exports, module) {
+  "../../../node_modules/semver/ranges/subset.js"(exports, module) {
     "use strict";
     var Range = require_range();
     var Comparator = require_comparator();
@@ -2315,9 +2315,9 @@ var require_subset = __commonJS({
   }
 });
 
-// node_modules/semver/index.js
+// ../../../node_modules/semver/index.js
 var require_semver2 = __commonJS({
-  "node_modules/semver/index.js"(exports, module) {
+  "../../../node_modules/semver/index.js"(exports, module) {
     "use strict";
     var internalRe = require_re();
     var constants = require_constants();
@@ -2413,7 +2413,7 @@ var require_semver2 = __commonJS({
 });
 
 // src/smell-cli.js
-import { readFileSync, existsSync as existsSync2 } from "node:fs";
+import { readFileSync as readFileSync2, existsSync as existsSync2 } from "node:fs";
 
 // src/smell.js
 import { execFileSync as execFileSync3 } from "node:child_process";
@@ -2433,19 +2433,22 @@ var VALID_TYPES = /* @__PURE__ */ new Set([
   "chore",
   "revert"
 ]);
-function parseCommit(raw) {
-  const parsed = (0, import_conventional_commits_parser.sync)(raw, {
-    headerPattern: /^(\w+)(?:\(([^)]+)\))?(!)?: (.+)$/,
+function parseCommit(raw, { additionalTypes = [], strictPolicy = false } = {}) {
+  if (strictPolicy && (typeof raw !== "string" || Buffer.byteLength(raw, "utf8") > 1048576 || Buffer.byteLength(raw.split(/\r?\n/, 1)[0], "utf8") > 4096)) throw new Error("Captain commit message size limit exceeded");
+  const semanticText = raw.replace(/^Captain-(?:Changes|Release|Provenance):[^\r\n]*$/gim, "");
+  const parsed = (0, import_conventional_commits_parser.sync)(semanticText, {
+    headerPattern: /^([a-z][a-z0-9-]*)(?:\(([^)]+)\))?(!)?: (.+)$/,
     headerCorrespondence: ["type", "scope", "breakingMark", "subject"],
     noteKeywords: ["BREAKING CHANGE", "BREAKING-CHANGE"],
     revertPattern: /^Revert\s"([^"]+)"\s*This reverts commit (\w+)\.?/i,
     revertCorrespondence: ["header", "hash"]
   });
   const type = parsed.type;
-  const valid = Boolean(type && VALID_TYPES.has(type) && parsed.subject);
   const breaking = Boolean(
     parsed.breakingMark === "!" || (parsed.notes || []).some((n) => /^BREAKING[\s-]CHANGE$/.test(n.title))
   );
+  const breakingDescription = (parsed.notes || []).filter((n) => /^BREAKING[\s-]CHANGE$/.test(n.title)).map((n) => n.text).join("\n") || null;
+  const valid = Boolean(type && (VALID_TYPES.has(type) || additionalTypes.includes(type)) && parsed.subject && (!strictPolicy || parsed.subject.trim() && (!parsed.scope || /^[A-Za-z0-9][A-Za-z0-9._/-]*$/.test(parsed.scope)) && (!breaking || breakingDescription?.trim())));
   const issues = (parsed.references || []).map((r) => `#${r.issue}`);
   return {
     valid,
@@ -2454,7 +2457,7 @@ function parseCommit(raw) {
     subject: parsed.subject || null,
     body: parsed.body || "",
     breaking,
-    breaking_description: (parsed.notes || []).filter((n) => /^BREAKING[\s-]CHANGE$/.test(n.title)).map((n) => n.text).join("\n") || null,
+    breaking_description: breakingDescription,
     issues,
     revert: Boolean(parsed.revert),
     raw
@@ -2530,14 +2533,12 @@ function isIncludedCsPath(relPath) {
   void name;
   return true;
 }
+function selectedGitCsPaths(ref) {
+  const listing = runGit(["ls-tree", "-r", "--name-only", "-z", ref]);
+  return listing.split("\0").filter(Boolean).map((p) => p.replace(/\\/g, "/")).filter(isIncludedCsPath);
+}
 function materializeGitRef(ref, destDir) {
-  let listing;
-  try {
-    listing = runGit(["ls-tree", "-r", "--name-only", "-z", ref]);
-  } catch (err) {
-    throw new Error(`git ls-tree failed for ref ${ref}: ${err.message}`);
-  }
-  const files = listing.split("\0").filter(Boolean).map((p) => p.replace(/\\/g, "/")).filter(isIncludedCsPath);
+  const files = selectedGitCsPaths(ref);
   for (const relPath of files) {
     const outPath = join(destDir, ...relPath.split("/"));
     mkdirSync(dirname(outPath), { recursive: true });
@@ -2638,9 +2639,72 @@ async function tryApiDiff(previousRef, toRef) {
 // src/compute-bump.js
 var import_semver = __toESM(require_semver2(), 1);
 import { execFileSync as execFileSync2 } from "node:child_process";
-import { writeFileSync as writeFileSync2 } from "node:fs";
+import { readFileSync, writeFileSync as writeFileSync2 } from "node:fs";
+
+// src/squash-changes.js
+function expandSquashCommit(commit, options = {}) {
+  const lines = (commit.raw || "").split(/\r?\n/).filter((line) => /^Captain-Changes:/i.test(line));
+  if (!lines.length) return [commit];
+  if (lines.length !== 1) throw new Error("duplicate Captain-Changes trailers");
+  const match = /^Captain-Changes: ([A-Za-z0-9_-]+)$/.exec(lines[0]);
+  if (!match) throw new Error("malformed Captain-Changes trailer");
+  if (match[1].length > 2097152) throw new Error("Captain-Changes encoded size limit exceeded");
+  let payload;
+  try {
+    const bytes = Buffer.from(match[1], "base64url");
+    if (bytes.length > 1048576) throw new RangeError("Captain-Changes decoded size limit exceeded");
+    if (bytes.toString("base64url") !== match[1]) throw new Error("noncanonical encoding");
+    payload = JSON.parse(bytes.toString("utf8"));
+  } catch (error) {
+    if (error instanceof RangeError) throw error;
+    throw new Error("malformed Captain-Changes payload");
+  }
+  if (!payload || payload.schema_version !== 1 || !Array.isArray(payload.commits) || !payload.commits.length) {
+    throw new Error("invalid Captain-Changes schema");
+  }
+  if (payload.commits.length > 512) throw new Error("Captain-Changes entry count limit exceeded");
+  let messageBytes = 0;
+  const seen = /* @__PURE__ */ new Set();
+  const expanded = payload.commits.map((change) => {
+    if (!change || typeof change.oid !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(change.oid) || seen.has(change.oid) || typeof change.message !== "string" || !change.message.trim()) {
+      throw new Error("invalid or duplicate Captain-Changes entry");
+    }
+    if (Buffer.byteLength(change.message.split(/\r?\n/, 1)[0], "utf8") > 4096) throw new Error("Captain-Changes commit header size limit exceeded");
+    messageBytes += Buffer.byteLength(change.message, "utf8");
+    if (messageBytes > 1048576) throw new Error("Captain-Changes aggregate message size limit exceeded");
+    if (/^Captain-Changes:/im.test(change.message)) throw new Error("nested Captain-Changes payload must be flattened");
+    seen.add(change.oid);
+    const parsed = parseCommit(change.message, { ...options, strictPolicy: true });
+    if (!parsed.valid || parsed.breaking && !parsed.breaking_description) throw new Error("invalid Conventional Commit in Captain-Changes");
+    return { hash: change.oid.slice(0, 7), full_hash: change.oid, squash_hash: commit.full_hash, squash_message: commit.raw, ...parsed };
+  });
+  const summary = parseCommit(commit.raw, { ...options, strictPolicy: true });
+  if (!summary.valid || summary.breaking && !summary.breaking_description) throw new Error("invalid squash Conventional Commit");
+  expanded.unshift({ hash: commit.full_hash.slice(0, 7), full_hash: commit.full_hash, squash_summary: true, ...summary });
+  return expanded;
+}
+
+// src/json-pointer.js
+function resolveJsonPointer(doc, pointer) {
+  if (typeof pointer !== "string" || !pointer.startsWith("/")) throw new Error("invalid JSON pointer");
+  const parts = pointer.slice(1).split("/").map((part) => {
+    if (/~(?![01])/.test(part)) throw new Error("invalid JSON pointer");
+    return part.replace(/~1/g, "/").replace(/~0/g, "~");
+  });
+  if (parts.some((part) => ["__proto__", "prototype", "constructor"].includes(part))) throw new Error("unsafe JSON pointer");
+  let parent = doc;
+  for (const part of parts.slice(0, -1)) {
+    if (!parent || typeof parent !== "object" || !Object.hasOwn(parent, part)) throw new Error("missing JSON pointer");
+    parent = parent[part];
+  }
+  const key = parts.at(-1);
+  if (!parent || typeof parent !== "object" || !Object.hasOwn(parent, key)) throw new Error("missing JSON pointer");
+  return { parent, key };
+}
+
+// src/compute-bump.js
 function git(...args) {
-  return execFileSync2("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+  return execFileSync2("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 }).trim();
 }
 function lastTag() {
   try {
@@ -2651,25 +2715,28 @@ function lastTag() {
 }
 var HSEP = "<<<H>>>";
 var CSEP = "<<<COMMIT-SEP>>>";
-function commitsInRange(range) {
-  let out;
-  try {
-    out = git("log", range, `--pretty=format:%H${HSEP}%B${CSEP}`);
-  } catch {
-    return [];
-  }
+var PSEP = "<<<PARENTS>>>";
+function commitsInRange(range, additionalTypes = [], strictPolicy = false) {
+  const out = git("log", range, `--pretty=format:%H${HSEP}%P${PSEP}%B${CSEP}`);
   if (!out) return [];
   return out.split(CSEP).map((c) => c.trim()).filter(Boolean).map((chunk) => {
     const idx = chunk.indexOf(HSEP);
     const fullHash = chunk.slice(0, idx);
-    const message = chunk.slice(idx + HSEP.length).trim();
-    const parsed = parseCommit(message);
+    const parentEnd = chunk.indexOf(PSEP, idx + HSEP.length);
+    if (idx < 0 || parentEnd < 0) throw new Error("malformed Git history record");
+    const parents = chunk.slice(idx + HSEP.length, parentEnd).trim().split(/\s+/).filter(Boolean);
+    const message = chunk.slice(parentEnd + PSEP.length).trim();
+    if (parents.length > 1 && /^Merge (?:branch|remote-tracking branch|tag) /.test(message.split(/\r?\n/, 1)[0])) {
+      const tree = git("rev-parse", fullHash + "^{tree}");
+      if (parents.some((parent) => git("rev-parse", parent + "^{tree}") === tree)) return null;
+    }
+    const parsed = parseCommit(message, { additionalTypes, strictPolicy });
     return {
       hash: fullHash.slice(0, 7),
       full_hash: fullHash,
       ...parsed
     };
-  });
+  }).filter(Boolean).flatMap((commit) => expandSquashCommit(commit, { additionalTypes, strictPolicy }));
 }
 function applyBump(prev, kind, prereleaseId) {
   const base = prev ? prev.replace(/^v/, "") : "0.0.0";
@@ -2694,12 +2761,109 @@ function applyBump(prev, kind, prereleaseId) {
 function computeBump(options = {}) {
   const prereleaseId = options.prereleaseId || null;
   const bumpOverride = options.bumpOverride || null;
+  const defaults = { feat: "minor", fix: "patch", perf: "patch", docs: "none", style: "none", refactor: "none", test: "none", chore: "none", ci: "none", build: "none", revert: "none" };
+  const custom = options.typeMap || {};
+  if (typeof custom !== "object" || Array.isArray(custom)) throw new Error("typeMap must be an object");
+  for (const [type, impact] of Object.entries(custom)) if (!/^[a-z][a-z0-9-]*$/.test(type) || !["none", "patch", "minor"].includes(impact)) throw new Error("invalid typeMap entry");
+  const typeMap = Object.assign(/* @__PURE__ */ Object.create(null), defaults, custom);
   if (bumpOverride && !["major", "minor", "patch"].includes(bumpOverride)) {
     throw new Error(`bumpOverride must be one of major|minor|patch (got "${bumpOverride}")`);
   }
-  const prev = lastTag();
-  const range = prev ? `${prev}..HEAD` : "HEAD";
-  const commits = commitsInRange(range);
+  const explicitBaseline = Boolean(options.baseline || options.baselineRef);
+  if (Boolean(explicitBaseline) !== Boolean(options.target) || options.baseline && options.baselineRef) throw new Error("one baseline and target must be supplied together");
+  if (!options.baselineRef && (options.baselineVersion || options.baselineSurface || options.baselinePointer)) throw new Error("initial baseline version and surface require baselineRef");
+  let prev = lastTag();
+  let baselineRevision = null;
+  let baselineKind = null;
+  let targetRevision = git("rev-parse", "--verify", "HEAD^{commit}");
+  let range;
+  if (options.baselineRef) {
+    if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(options.baselineRef) || typeof options.baselineVersion !== "string" || !/^v?\d+\.\d+\.\d+$/.test(options.baselineVersion) || !import_semver.default.valid(options.baselineVersion)) throw new Error("initial baseline requires an exact OID and stable version");
+    if (typeof options.baselineSurface !== "string" || !/^[A-Za-z0-9._/-]+$/.test(options.baselineSurface) || options.baselineSurface.startsWith("/") || options.baselineSurface.split("/").some((part) => !part || part === "." || part === "..")) throw new Error("invalid initial baseline surface");
+    if (typeof options.target !== "string" || options.target.startsWith("-")) throw new Error("invalid target revision");
+    baselineRevision = git("rev-parse", "--verify", options.baselineRef + "^{commit}");
+    const surface = git("show", baselineRevision + ":" + options.baselineSurface);
+    let surfaceVersion = surface;
+    if (options.baselinePointer) {
+      const { parent, key } = resolveJsonPointer(JSON.parse(surface), options.baselinePointer);
+      if (typeof parent[key] !== "string") throw new Error("initial baseline JSON version must be a string");
+      surfaceVersion = parent[key];
+    }
+    surfaceVersion = surfaceVersion.replace(/^v/, "");
+    if (surfaceVersion !== options.baselineVersion.replace(/^v/, "")) throw new Error("initial baseline version does not match the committed surface");
+    prev = options.baselineVersion;
+    baselineKind = "declared_initial";
+    targetRevision = git("rev-parse", "--verify", options.target + "^{commit}");
+    try {
+      git("merge-base", "--is-ancestor", baselineRevision, targetRevision);
+    } catch {
+      throw new Error("baseline is not an ancestor of target");
+    }
+    range = baselineRevision + ".." + targetRevision;
+  } else if (options.baseline) {
+    if (typeof options.target !== "string" || options.target.startsWith("-")) throw new Error("invalid target revision");
+    targetRevision = git("rev-parse", "--verify", options.target + "^{commit}");
+    if (options.baseline === "latest-stable") {
+      const tags = git("tag", "--merged", targetRevision, "--list").split(/\r?\n/).filter((tag) => import_semver.default.valid(tag) && !import_semver.default.prerelease(tag));
+      if (!tags.length) throw new Error("no reachable stable SemVer tag; configure an explicit initial baseline");
+      tags.sort((a, b) => import_semver.default.rcompare(a, b));
+      if (tags.length > 1 && import_semver.default.compare(tags[0], tags[1]) === 0) throw new Error("ambiguous latest stable SemVer tags");
+      prev = tags[0];
+      baselineKind = "latest_stable";
+    } else {
+      if (typeof options.baseline !== "string" || !import_semver.default.valid(options.baseline) || import_semver.default.prerelease(options.baseline)) throw new Error("baseline must be a stable SemVer tag");
+      prev = options.baseline;
+      baselineKind = "stable_tag";
+    }
+    baselineRevision = git("rev-parse", "--verify", "refs/tags/" + prev + "^{commit}");
+    try {
+      git("merge-base", "--is-ancestor", baselineRevision, targetRevision);
+    } catch {
+      throw new Error("baseline is not an ancestor of target");
+    }
+    range = baselineRevision + ".." + targetRevision;
+  } else {
+    if (prev) baselineRevision = git("rev-parse", "--verify", prev + "^{commit}");
+    range = prev ? prev + "..HEAD" : "HEAD";
+  }
+  let commits = commitsInRange(range, Object.keys(typeMap), explicitBaseline);
+  if (options.previewWrapper !== void 0) {
+    const wrapper = options.previewWrapper;
+    if (!explicitBaseline || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(wrapper || "") || wrapper !== targetRevision || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/.test(options.compatibilityBase || "")) throw new Error("preview wrapper requires exact target and compatibility base");
+    const object = git("cat-file", "-p", wrapper);
+    const header = object.split("\n\n", 1)[0];
+    const expected = `tree ${git("rev-parse", wrapper + "^{tree}")}
+parent ${options.compatibilityBase}
+author Captain Preview <captain-preview@invalid> 0 +0000
+committer Captain Preview <captain-preview@invalid> 0 +0000`;
+    if (header !== expected || !object.startsWith(header + "\n\nchore(landing): refresh approved feature\n\n")) throw new Error("preview wrapper is not the deterministic Captain object");
+    const lines = object.slice((header + "\n\nchore(landing): refresh approved feature\n\n").length).split("\n");
+    if (lines.some((line) => !/^(?:(?:Implements|Completes|Needs-QA|Captain-Run):[ \t]+\S(?:[^\r\n]*\S)?|Captain-Changes: [A-Za-z0-9_-]+)$/.test(line))) throw new Error("preview wrapper contains unexpected semantic content");
+    const wrappers = commits.filter((commit) => commit.full_hash === wrapper && commit.squash_summary);
+    if (wrappers.length !== 1 || !commits.some((commit) => commit.squash_hash === wrapper)) throw new Error("preview wrapper lacks validated semantic children");
+    commits = commits.filter((commit) => !(commit.full_hash === wrapper && commit.squash_summary));
+  }
+  if (explicitBaseline && baselineRevision) {
+    const released = /* @__PURE__ */ new Map();
+    const normalize = (value) => (value || "").replace(/\r\n/g, "\n").split("\n").filter((line) => !/^Captain-Changes:/i.test(line)).join("\n").trim();
+    for (const entry of commitsInRange(baselineRevision, Object.keys(typeMap), false)) {
+      const message = normalize(entry.raw), existing = released.get(entry.full_hash);
+      if (existing !== void 0 && existing !== message) throw new Error("conflicting released semantic commit " + entry.full_hash);
+      released.set(entry.full_hash, message);
+    }
+    commits = commits.filter((entry) => {
+      const existing = released.get(entry.full_hash);
+      if (existing === void 0) return true;
+      if (existing !== normalize(entry.raw)) throw new Error("semantic commit conflicts with released baseline " + entry.full_hash);
+      return false;
+    });
+  }
+  const seenSource = /* @__PURE__ */ new Set();
+  for (const commit of commits) {
+    if (explicitBaseline && (!commit.valid || commit.breaking && !commit.breaking_description)) throw new Error("invalid Conventional Commit " + commit.full_hash);
+    if (seenSource.has(commit.full_hash)) throw new Error("duplicate semantic commit " + commit.full_hash);
+    seenSource.add(commit.full_hash);
+  }
   const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const prevIsPrerelease = prev ? (import_semver.default.prerelease(prev.replace(/^v/, "")) || []).length > 0 : false;
   if (commits.length === 0) {
@@ -2707,6 +2871,11 @@ function computeBump(options = {}) {
       const next2 = applyBump(prev, bumpOverride, prereleaseId);
       return {
         previous_version: prev,
+        baseline_revision: baselineRevision,
+        baseline_kind: baselineKind,
+        type_map: typeMap,
+        target_revision: targetRevision,
+        ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
         next_version: next2,
         bump_kind: bumpOverride,
         bump_reason: `no commits since last tag; explicit --bump ${bumpOverride}`,
@@ -2721,6 +2890,11 @@ function computeBump(options = {}) {
     }
     return {
       previous_version: prev,
+      baseline_revision: baselineRevision,
+      baseline_kind: baselineKind,
+      type_map: typeMap,
+      target_revision: targetRevision,
+      ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
       next_version: prev,
       bump_kind: "none",
       bump_reason: "no commits since last tag",
@@ -2740,30 +2914,31 @@ function computeBump(options = {}) {
   );
   const filtered = commits.filter((c) => !c.revert && !revertTargets.has(c.hash));
   const breaking = filtered.filter((c) => c.breaking);
-  const feats = filtered.filter((c) => c.type === "feat" && !c.breaking);
-  let kind, reason;
-  if (bumpOverride) {
-    kind = bumpOverride;
-    reason = `explicit --bump ${bumpOverride}`;
-  } else if (breaking.length > 0) {
-    kind = "major";
-    reason = `${breaking.length} breaking change${breaking.length > 1 ? "s" : ""}`;
-  } else if (feats.length > 0) {
-    kind = "minor";
-    reason = `${feats.length} feat commit${feats.length > 1 ? "s" : ""}, no breaking changes`;
-  } else {
-    kind = "patch";
-    reason = `${filtered.length} non-breaking, non-feat commit${filtered.length > 1 ? "s" : ""}`;
+  const ranks = { none: 0, patch: 1, minor: 2, major: 3 };
+  let kind = breaking.length ? "major" : "none";
+  let reason = breaking.length ? `${breaking.length} breaking change(s)` : "non-breaking commit type mapping";
+  for (const commit of filtered) {
+    const impact = typeMap[commit.type] || "none";
+    if (ranks[impact] > ranks[kind]) kind = impact;
   }
-  const next = applyBump(prev, kind, prereleaseId);
+  if (bumpOverride && ranks[bumpOverride] > ranks[kind]) {
+    kind = bumpOverride;
+    reason += `; raised by explicit --bump ${bumpOverride}`;
+  }
+  const next = kind === "none" ? prev : applyBump(prev, kind, prereleaseId);
   if (prereleaseId) {
     reason = `${reason}; pre-release id "${prereleaseId}"${prevIsPrerelease ? " (incremented)" : " (entered)"}`;
-  } else if (prevIsPrerelease) {
+  } else if (prevIsPrerelease && kind !== "none") {
     reason = `${reason}; graduating ${prev} \u2192 stable (commit signal "${kind}" is informational only)`;
     kind = "graduate";
   }
   return {
     previous_version: prev,
+    baseline_revision: baselineRevision,
+    baseline_kind: baselineKind,
+    type_map: typeMap,
+    target_revision: targetRevision,
+    ...options.previewWrapper ? { preview_wrapper: options.previewWrapper } : {},
     next_version: next,
     bump_kind: kind,
     bump_reason: reason,
@@ -2776,7 +2951,8 @@ function computeBump(options = {}) {
       description: c.breaking_description
     })),
     prerelease_id: prereleaseId,
-    previous_is_prerelease: prevIsPrerelease
+    previous_is_prerelease: prevIsPrerelease,
+    ...bumpOverride ? { bump_override: bumpOverride } : {}
   };
 }
 function parseCliOptions(argv) {
@@ -2792,6 +2968,15 @@ function parseCliOptions(argv) {
       }
       out.prereleaseId = next;
       i++;
+    } else if (["--baseline", "--target", "--baseline-ref", "--baseline-version", "--baseline-surface", "--baseline-pointer"].includes(a)) {
+      const next = argv[++i];
+      if (!next || next.startsWith("--")) throw new Error(a + " requires a value");
+      const keys = { "--baseline": "baseline", "--target": "target", "--baseline-ref": "baselineRef", "--baseline-version": "baselineVersion", "--baseline-surface": "baselineSurface", "--baseline-pointer": "baselinePointer" };
+      out[keys[a]] = next;
+    } else if (a === "--type-map") {
+      const path = argv[++i];
+      if (!path || path.startsWith("--")) throw new Error("--type-map requires a JSON file");
+      out.typeMap = JSON.parse(readFileSync(path, "utf8"));
     } else if (a === "--bump") {
       const next = argv[i + 1];
       if (!next || !["major", "minor", "patch"].includes(next)) {
@@ -3243,7 +3428,7 @@ async function main() {
 `);
       process.exit(2);
     }
-    message = readFileSync(p, "utf8").replace(/^#.*$/gm, "").trim();
+    message = readFileSync2(p, "utf8").replace(/^#.*$/gm, "").trim();
     inputs = getStagedInputs();
   } else if (args.positional.length === 1) {
     const ref = args.positional[0];

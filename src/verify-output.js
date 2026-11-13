@@ -60,7 +60,7 @@ function checkCoverage(manifest, section) {
   );
 
   function commitCovered(c) {
-    const hash = (c.hash ?? '').toLowerCase();
+    const hash = (c.squash_hash ?? c.hash ?? '').toLowerCase();
     if (hash) {
       for (const t of hashRefs) {
         if (t === hash || t.startsWith(hash) || hash.startsWith(t)) return true;
@@ -91,7 +91,7 @@ function checkCoverage(manifest, section) {
 
 export function verify(manifest, section, { coverage = false } = {}) {
   const errors = [];
-  const knownHashes = new Set(manifest.commits.map(c => c.hash));
+  const knownHashes = new Set(manifest.commits.flatMap(c => [c.hash, c.squash_hash].filter(Boolean)));
   const nextVersion = manifest.next_version;
   const refPattern = /\(([0-9a-f]{7,40}|v\d+\.\d+\.\d+[\w.\-+]*)\)/g;
 

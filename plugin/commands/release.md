@@ -1,9 +1,22 @@
 ---
-description: Orchestrate the release in a single commit. Changelog and VERSION ship with the work, not after it. No push.
+description: Manufacture a release according to the captured repository policy. No push.
 allowed-tools: Bash, Read, Edit
 ---
 
 # claude-release:release
+
+## Branch-driven policy routing
+
+First inspect the Captain policy captured from the trusted base, including any committed `commitPolicyPath`. If `commit.mode` is `branch_driven`, use this section and stop before the legacy steps below.
+
+Follow the configured source and target branch roles and authorized transitions. Feature and development integration do not manufacture release metadata. At a release boundary, use the pinned stable baseline and exact target revision with `lib/build-manifest.js`; add the configured prerelease identifier for a release candidate. An explicitly configured initial baseline uses `--baseline-ref`, `--baseline-version`, `--baseline-surface`, and, for JSON, `--baseline-pointer`. Report missing compatibility evidence rather than treating it as a clean diff.
+
+Captain must validate the release intent, exact revisions, protected transition, and authenticated compatibility decision for all MAJOR findings. Do not ask for an additional approval for PATCH, MINOR, or NONE. NONE does not create a release. Use `lib/prepare-artifacts.js --request <json>` to manufacture proposed contents from the verified manifest and configured surfaces; retain provenance and the project?s per-milestone changelog destination. The command only returns proposed content. It does not grant authority to edit, merge, or tag.
+
+For protected targets, prepare metadata in an authorized promotion PR. After the release merge, use Captain Orchestrator?s authenticated `release finalize` flow with fresh exact-commit proof. It invokes the hash-pinned release finalizer and, when authorized, tags the verified production commit. Preserve existing repository permissions. If the coordinator or required authenticated evidence is unavailable, report the blocker; do not fall through to direct branch mutation or tagging. Do not publish or push tags without authorization.
+
+## Legacy per-commit workflow
+
 
 **The flow is changelog-before-commit.** Build the manifest from staged work + already-committed history since the last tag, generate the section, stage the artifacts, then make ONE commit covering the work + VERSION + CHANGELOG. Tag.
 
@@ -43,10 +56,10 @@ The chore-release-after-the-fact pattern produces a noisy two-commit cluster (on
    How the manifest classifies (combined `compute-bump.js` + `build-manifest.js`):
    - Any commit in range has a breaking marker (`!` or `BREAKING CHANGE:` footer)  → **major**
    - Any `feat:` commit in range, no breaking                                       → **minor**
-   - Other Conventional Commit types in range (fix, perf, refactor, …)             → **patch**
-   - Zero commits in range, api-diff has removals or changes                       → **major** (likely breaking)
-   - Zero commits in range, api-diff has only additions                            → **minor** (backwards-compatible feature)
-   - Zero commits in range, staged work but empty api-diff                         → **patch** (non-API change)
+   - `fix:` and `perf:` are PATCH; docs, refactor, tests, CI, build, and chore are NONE by default.
+   - API removals or signature changes raise any lower commit classification to MAJOR.
+   - API additions raise a lower classification to MINOR.
+   - Staged work without an API classification follows the legacy PATCH fallback; unavailable analysis must be reported.
    - Nothing staged, nothing committed                                             → abort
 
    You **may not** substitute your own semver opinion for the manifest's. "This feels like a feature" / "this is just a fix" / "we should hold back the minor bump" are not valid reasons. If the manifest produces a number you think is wrong, fix the manifest classifier (`compute-bump.js` / `build-manifest.js` / `parse-commits.js`) and rerun — do not patch the JSON.
@@ -54,7 +67,7 @@ The chore-release-after-the-fact pattern produces a noisy two-commit cluster (on
    The only legitimate override paths are upstream of the manifest:
    - A breaking-change marker that `parse-commits.js` failed to detect → fix the parser.
    - An api-diff entry classified wrong by `build-manifest.js`'s promotion → fix the promotion.
-   - A user explicit `--bump major|minor|patch` flag passed to `/release` (and forwarded to `build-manifest.js`). This is the documented escape hatch for cases the manifest legitimately cannot infer — typically non-Unity projects where api-diff returns null and the orchestrator has no commit signal yet (zero commits in range + staged work that is conceptually a `feat:` or breaking change). `--bump` short-circuits both the api-diff promotion and the staged-work-→-patch fallback. The user must pass it explicitly; the orchestrator does NOT invent it.
+   - A user-provided `--bump major|minor|patch` can raise the computed impact. It cannot lower a breaking commit or API-diff classification.
 
    **Pre-release status uses semver pre-release identifiers** (e.g. `v1.0.0-rc.1`, `v2.0.0-alpha.3`). It is NOT expressed by sitting at `0.x.y`. Pre-1.0 as a "we haven't stabilized yet" signal is not used by this plugin.
 

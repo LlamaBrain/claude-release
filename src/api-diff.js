@@ -8,6 +8,7 @@ import { existsSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync, rmSync
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 
 const WORKTREE_REF = 'WORKTREE';
 
@@ -59,18 +60,31 @@ function isIncludedCsPath(relPath) {
   return true;
 }
 
+function selectedGitCsPaths(ref) {
+  const listing = runGit(['ls-tree', '-r', '--name-only', '-z', ref]);
+  return listing.split('\0').filter(Boolean).map(p => p.replace(/\\/g, '/')).filter(isIncludedCsPath);
+}
+
+// Hash the same committed paths and bytes materialized for Roslyn, with explicit
+// length framing so paths and content cannot collide by concatenation.
+export function fingerprintGitSources(ref) {
+  const hash = createHash('sha256');
+  hash.update('captain-roslyn-selected-sources-v1\0');
+  for (const path of selectedGitCsPaths(ref).sort()) {
+    const pathBytes = Buffer.from(path, 'utf8');
+    const bytes = runGit(['show', `${ref}:${path}`], { encoding: 'buffer' });
+    const length = Buffer.alloc(8); length.writeBigUInt64BE(BigInt(pathBytes.length)); hash.update(length); hash.update(pathBytes);
+    length.writeBigUInt64BE(BigInt(bytes.length)); hash.update(length); hash.update(bytes);
+  }
+  return hash.digest('hex');
+}
+
 function materializeGitRef(ref, destDir) {
   // List tracked files at the ref. We do NOT pass a `-- '*.cs'` pathspec here: ls-tree's pathspec
   // semantics differ from ls-files — with `-r -- '*.cs'` git ls-tree returns zero rows because
   // the glob does not traverse into subdirectories the way callers expect. Filtering on extension
   // is done in JS via `isIncludedCsPath`, which also enforces the dir/suffix exclusions.
-  let listing;
-  try {
-    listing = runGit(['ls-tree', '-r', '--name-only', '-z', ref]);
-  } catch (err) {
-    throw new Error(`git ls-tree failed for ref ${ref}: ${err.message}`);
-  }
-  const files = listing.split('\0').filter(Boolean).map(p => p.replace(/\\/g, '/')).filter(isIncludedCsPath);
+  const files = selectedGitCsPaths(ref);
   for (const relPath of files) {
     const outPath = join(destDir, ...relPath.split('/'));
     mkdirSync(dirname(outPath), { recursive: true });
